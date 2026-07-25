@@ -1,3 +1,4 @@
+from os import linesep
 import os
 
 class BaseScanner:
@@ -22,6 +23,47 @@ class BaseScanner:
                 f.writelines(lines)
             return True
         return False
+
+class DockerScanner(BaseScanner):
+    #scanning class dedicated for docerfile analysis
+    def scan(self):
+        vulnerbilities = []
+
+        if not os.path.exists(self.filpathath):
+            return{"error": f"File not found: {self.filepath}"}
+
+            with open(self.filpathath, 'r') as file:
+                lines = file.readlines()
+
+            for line_idx, line_text in enumerate(lines, start = 1):
+                clean_line = line_text.strip()
+
+                #detecting root previlages
+                if "USER root" in clean_line:
+                    vulnerbilities.append({
+                        "id":"ERR_ROOT_PRIV",
+                        "line":line_idx,
+                        "severity":"CRITICAL",
+                        "category":"Previlege Escalation",
+                        "description":"Container running with root previlages",
+                        "fix": "USER node"
+                    })
+
+                #detecting exposed ssh port 22
+                if "EXPOSE 22" in clean_line:
+                    vulnerbilities.append({
+                        "id":"ERR_OPEN_PORT_22",
+                        "line":line_idx,
+                        "severity":"HIGH",
+                        "category":"Network Security",
+                        "description":"Insecure SSH port 22 exposed directly",
+                        "fix": "# EXPOSE 22 (Disabled for security)"
+                    })
+            
+                return vulnerbilities
+
+
+
 
 
         
