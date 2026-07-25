@@ -22,7 +22,7 @@ def scane_file():
     }
     return jsonify(payload), 200
 
-@app.route('api/remediate', methods=['POST'])
+@app.route('/api/remediate', methods=['POST'])
 def remediate_file():
     data = request.get_json()
 
