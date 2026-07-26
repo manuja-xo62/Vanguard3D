@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from scanner import DockerScanner
 from ml_engine import predict_risk
+from cve_updater import update_cve_database
 
 app = Flask(__name__)
 CORS(app)
@@ -50,6 +51,19 @@ def remediate_file():
             "vulnerabilities": updated_vulnerabilities
         }), 200
     return jsonify({"error": "Failed to modify file."}), 400
+
+@app.route('/api/sync-feed', methods=['POST'])
+def sync_threat_feed():
+    """Trigger real-time CVE scraping and ML model re-training."""
+    try:
+        update_cve_database()
+        return jsonify({
+            "status": "success",
+            "message": "Threat intelligence feed synchronized and ML model retrained."
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     print("VanguardNode Engine with CIS ML Scorer running on http://127.0.0.1:5000")
