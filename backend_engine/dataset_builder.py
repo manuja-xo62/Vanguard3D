@@ -1,32 +1,42 @@
 import pandas as pd
 import random
+import json
+import os
 
-def generate_real_world_data(num_samples=2500):
+def generate_dynamic_dataset(num_samples=5000):
+    if not os.path.exists('cve_database.json'):
+        print("Error: cve_database.json missing.")
+        return
+
+    with open('cve_database.json', 'r') as f:
+        cve_db = json.load(f)
+
+    features = list(cve_db.keys())
     data = []
+
     for _ in range(num_samples):
-        # 1 - vulbervitblity & 0 - no vulbernility
-        root_priv = random.choice([0, 1])
-        open_ssh = random.choice([0, 1])
-        no_healthcheck = random.choice([0, 1])
-        outdated_base = random.choice([0, 1])
+        sample_row = []
+        total_risk = 0.0
+
+        for feat in features:
+
+            has_vuln = 1 if random.random() < 0.2 else 0
+            sample_row.append(has_vuln)
+            
+            if has_vuln:
+                total_risk += cve_db[feat]["weight"]
+
+        # add statsical variety
+        noise = random.uniform(-5.0, 5.0)
+        final_score = max(0.0, min(100.0, total_risk + noise))
         
-        # css impact weighning
-        score = 0
-        if root_priv: score += 45.0
-        if open_ssh: score += 35.0
-        if outdated_base: score += 15.0
-        if no_healthcheck: score += 5.0
-        
-        # adding statsical variety
-        noise = random.uniform(-3.5, 3.5)
-        final_score = max(0.0, min(100.0, score + noise))
-        
-        data.append([root_priv, open_ssh, no_healthcheck, outdated_base, round(final_score, 2)])
-        
-    # storing the values in pandas dataframe
-    df = pd.DataFrame(data, columns=['ERR_ROOT_PRIV', 'ERR_OPEN_PORT_22', 'ERR_NO_HEALTHCHECK', 'ERR_OUTDATED_BASE', 'Risk_Score'])
+        sample_row.append(round(final_score, 2))
+        data.append(sample_row)
+
+    # Compile the data intro a matrix
+    df = pd.DataFrame(data, columns=features + ['Risk_Score'])
     df.to_csv('dataset.csv', index=False)
-    print(f"Authentic dataset generated with {num_samples} records: dataset.csv")
+    print(f"Dynamic dataset generated! Training matrix dimensions: {num_samples} rows x {len(features)} features.")
 
 if __name__ == '__main__':
-    generate_real_world_data()
+    generate_dynamic_dataset()
