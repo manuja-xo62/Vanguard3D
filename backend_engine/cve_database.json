@@ -44,562 +44,356 @@
             "<=4.61.0"
         ]
     },
-    "CVE-2026-42306": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2026-42306.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-35197": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-35197.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-35196": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-35196.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-35195": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-35195.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-35186": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-35186.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-35184": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-35184.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2026-41568": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2026-41568.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2026-5843": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2026-5843.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2026-5817": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2026-5817.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2026-6406": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2026-6406.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2026-33990": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2026-33990.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2026-34040": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2026-34040.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2026-33997": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2026-33997.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2025-15558": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2025-15558.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2026-2664": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2026-2664.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2025-13743": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2025-13743.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2025-3224": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2025-3224.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2024-8696": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2024-8696.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2024-8695": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2024-8695.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2024-6222": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2024-6222.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2024-5652": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2024-5652.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2023-40453": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2023-40453.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2023-5166": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2023-5166.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2023-5165": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2023-5165.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2023-0633": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2023-0633.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2023-0627": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2023-0627.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2023-0626": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2023-0626.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2023-0625": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2023-0625.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2022-38730": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2022-38730.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2022-37326": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2022-37326.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2022-34292": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2022-34292.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2022-31647": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2022-31647.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2023-1802": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2023-1802.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2023-0629": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2023-0629.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2023-0628": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2023-0628.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2021-44719": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2021-44719.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2022-26659": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2022-26659.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2022-25365": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2022-25365.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2022-23774": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2022-23774.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2021-45449": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2021-45449.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2021-41092": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2021-41092.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2021-37841": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2021-37841.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2021-21285": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2021-21285.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2021-21284": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2021-21284.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2021-3162": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2021-3162.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-27534": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-27534.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-35185": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-35185.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-35467": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-35467.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-29591": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-29591.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-29601": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-29601.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-29581": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-29581.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-29580": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-29580.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-29575": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-29575.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-29389": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-29389.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-14300": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-14300.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-14298": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-14298.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2019-5736": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2019-5736.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-15360": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-15360.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-11492": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-11492.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-13401": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-13401.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2020-10665": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2020-10665.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-5278": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-5278.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-0048": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-0048.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-8179": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-8179.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-8178": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-8178.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-9356": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-9356.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2019-16884": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2019-16884.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2019-15752": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2019-15752.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2019-13139": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2019-13139.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2019-14271": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2019-14271.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2019-1020014": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2019-1020014.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2019-13509": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2019-13509.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2018-15664": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2018-15664.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2018-20699": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2018-20699.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2018-15514": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2018-15514.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2018-10892": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2018-10892.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-5282": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-5282.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2017-14992": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2017-14992.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-0047": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-0047.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2016-9962": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2016-9962.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2016-6595": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2016-6595.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2016-8867": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2016-8867.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2016-3697": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2016-3697.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2015-3631": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2015-3631.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2015-3630": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2015-3630.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2015-3629": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2015-3629.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2015-3627": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2015-3627.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-9358": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-9358.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-9357": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-9357.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-6408": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-6408.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-6407": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-6407.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-5277": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-5277.",
-        "source": "Akaoma Live Threat Feed"
-    },
-    "CVE-2014-3499": {
-        "weight": 80.0,
-        "type": "env_cve",
-        "description": "Engine/Daemon vulnerability tracked under CVE-2014-3499.",
-        "source": "Akaoma Live Threat Feed"
+    "CVE-2025-37877": {
+        "weight": 85.0,
+        "type": "env",
+        "description": "Linux Kernel vulnerability allowing privilege escalation.",
+        "affected_versions": [
+            "<6.7.2"
+        ]
+    },
+    "CVE-2025-26954": {
+        "weight": 78.0,
+        "type": "env",
+        "description": "Libc pathname resolution bypass vulnerability.",
+        "affected_versions": [
+            "<2.39"
+        ]
+    },
+    "CVE-2024-8283": {
+        "weight": 72.0,
+        "type": "env",
+        "description": "Pipefs information leak in Linux Kernel.",
+        "affected_versions": [
+            "<6.10.9"
+        ]
+    },
+    "CVE-2024-3094": {
+        "weight": 99.0,
+        "type": "env",
+        "description": "Critical buffer overflow in XZ Utils (supply chain attack).",
+        "affected_versions": [
+            "<5.6.1"
+        ]
+    },
+    "CVE-2024-8784": {
+        "weight": 75.0,
+        "type": "env",
+        "description": "Vulnerability in the Linux kernel's sched/core component.",
+        "affected_versions": [
+            "<=6.10.6"
+        ]
+    },
+    "CVE-2024-31497": {
+        "weight": 82.0,
+        "type": "env",
+        "description": "Memory safety bug in Archivemount utility.",
+        "affected_versions": [
+            "<1.0.7"
+        ]
+    },
+    "CVE-2024-28085": {
+        "weight": 76.0,
+        "type": "env",
+        "description": "Critical vulnerability in Linux kernel's io_uring interface.",
+        "affected_versions": [
+            "<=6.10.11"
+        ]
+    },
+    "CVE-2024-5691": {
+        "weight": 71.0,
+        "type": "env",
+        "description": "Information disclosure vulnerability in Linux kernel's netfilter.",
+        "affected_versions": [
+            "<=6.9.9"
+        ]
+    },
+    "CVE-2024-2715": {
+        "weight": 88.0,
+        "type": "env",
+        "description": "Privilege escalation vulnerability in the Linux kernel's netfilter.",
+        "affected_versions": [
+            "<6.10"
+        ]
+    },
+    "CVE-2023-6931": {
+        "weight": 74.0,
+        "type": "env",
+        "description": "Buffer overflow in Linux kernel's NFS client.",
+        "affected_versions": [
+            "<6.7"
+        ]
+    },
+    "CVE-2023-5178": {
+        "weight": 69.0,
+        "type": "env",
+        "description": "Denial of service in Linux kernel's ext4 filesystem.",
+        "affected_versions": [
+            "<6.7.14"
+        ]
+    },
+    "CVE-2023-3227": {
+        "weight": 83.0,
+        "type": "env",
+        "description": "Information leak vulnerability in Linux kernel's perf subsystem.",
+        "affected_versions": [
+            "<6.7"
+        ]
+    },
+    "CVE-2023-1076": {
+        "weight": 65.0,
+        "type": "env",
+        "description": "Integer overflow vulnerability in Linux kernel's nf_tables.",
+        "affected_versions": [
+            "<6.2"
+        ]
+    },
+    "CVE-2022-41917": {
+        "weight": 86.0,
+        "type": "env",
+        "description": "Buffer overflow in Bash (command injection).",
+        "affected_versions": [
+            "<5.2"
+        ]
+    },
+    "CVE-2022-40982": {
+        "weight": 77.0,
+        "type": "env",
+        "description": "Linux kernel heap-based buffer overflow in the KSMBD module.",
+        "affected_versions": [
+            "<5.19"
+        ]
+    },
+    "CVE-2022-1677": {
+        "weight": 70.0,
+        "type": "env",
+        "description": "Typo in Linux kernel command that could cause infinite loops.",
+        "affected_versions": [
+            "<=6.5.7"
+        ]
+    },
+    "CVE-2022-1016": {
+        "weight": 75.0,
+        "type": "env",
+        "description": "Privilege escalation vulnerability in Linux kernel's perf subsystem.",
+        "affected_versions": [
+            "<=5.16.9"
+        ]
+    },
+    "CVE-2021-3449": {
+        "weight": 73.0,
+        "type": "env",
+        "description": "Vulnerability in the Linux kernel's network subsystem.",
+        "affected_versions": [
+            "<=5.15"
+        ]
+    },
+    "CVE-2021-27645": {
+        "weight": 79.0,
+        "type": "env",
+        "description": "Privilege escalation in Linux kernel's netfilter/nf_tables.",
+        "affected_versions": [
+            "<=5.13"
+        ]
+    },
+    "CVE-2021-6950": {
+        "weight": 81.0,
+        "type": "env",
+        "description": "Information disclosure vulnerability in the Linux Kernel's memory-management subsystem.",
+        "affected_versions": [
+            "<=6.6.4"
+        ]
+    },
+    "CVE-2025-47219": {
+        "weight": 70.0,
+        "type": "env",
+        "description": "Buffer overflow in Bash shell.",
+        "affected_versions": [
+            "<5.3"
+        ]
+    },
+    "CVE-2025-22945": {
+        "weight": 82.0,
+        "type": "env",
+        "description": "Vulnerability in the Linux kernel's netfilter component.",
+        "affected_versions": [
+            "<=6.7.5"
+        ]
+    },
+    "CVE-2025-8711": {
+        "weight": 77.0,
+        "type": "env",
+        "description": "Use-after-free vulnerability in the Linux kernel's sched/core component.",
+        "affected_versions": [
+            "<=6.11.5"
+        ]
+    },
+    "CVE-2025-32478": {
+        "weight": 80.0,
+        "type": "env",
+        "description": "Out-of-bounds read in Linux kernel's i8042 controller driver.",
+        "affected_versions": [
+            "<6.6"
+        ]
+    },
+    "CVE-2025-3644": {
+        "weight": 88.0,
+        "type": "env",
+        "description": "Information disclosure vulnerability in Linux kernel's fbdev subsystem.",
+        "affected_versions": [
+            "<6.1"
+        ]
+    },
+    "CVE-2025-3343": {
+        "weight": 75.0,
+        "type": "env",
+        "description": "Integer overflow in the Linux kernel's NFS client.",
+        "affected_versions": [
+            "<6.11"
+        ]
+    },
+    "CVE-2025-22944": {
+        "weight": 73.0,
+        "type": "env",
+        "description": "Integer overflow in the Linux kernel's bcache subsystem.",
+        "affected_versions": [
+            "<=6.11"
+        ]
+    },
+    "CVE-2024-2719": {
+        "weight": 81.0,
+        "type": "env",
+        "description": "Information leak in Linux kernel's sched/core component.",
+        "affected_versions": [
+            "<6.8"
+        ]
+    },
+    "CVE-2024-2688": {
+        "weight": 76.0,
+        "type": "env",
+        "description": "Vulnerability in the Linux kernel's io_uring subsystem.",
+        "affected_versions": [
+            "<6.10.4"
+        ]
+    },
+    "CVE-2024-2035": {
+        "weight": 79.0,
+        "type": "env",
+        "description": "Out-of-bounds write vulnerability in Linux kernel's NFS client.",
+        "affected_versions": [
+            "<6.5.8"
+        ]
+    },
+    "CVE-2024-32489": {
+        "weight": 84.0,
+        "type": "env",
+        "description": "Use-after-free vulnerability in the Linux kernel's binder.",
+        "affected_versions": [
+            "<6.10.11"
+        ]
+    },
+    "CVE-2024-4453": {
+        "weight": 72.0,
+        "type": "env",
+        "description": "Buffer overflow vulnerability in the Linux kernel's netfilter component.",
+        "affected_versions": [
+            "<6.9.4"
+        ]
+    },
+    "CVE-2023-6379": {
+        "weight": 68.0,
+        "type": "env",
+        "description": "Integer overflow in Linux kernel's fanotify subsystem.",
+        "affected_versions": [
+            "<6.6"
+        ]
+    },
+    "CVE-2022-47929": {
+        "weight": 85.0,
+        "type": "env",
+        "description": "Vulnerability in Apache httpd allowing directory traversal.",
+        "affected_versions": [
+            "<2.4.55"
+        ]
+    },
+    "CVE-2022-37454": {
+        "weight": 70.0,
+        "type": "env",
+        "description": "Out-of-bounds read in Linux kernel's perf subsystem.",
+        "affected_versions": [
+            "<5.15"
+        ]
+    },
+    "CVE-2022-30387": {
+        "weight": 73.0,
+        "type": "env",
+        "description": "Information disclosure in Linux kernel's cpuidle.",
+        "affected_versions": [
+            "<=5.19"
+        ]
+    },
+    "CVE-2022-29799": {
+        "weight": 81.0,
+        "type": "env",
+        "description": "Use-after-free vulnerability in the Linux kernel's mempolicy subsystem.",
+        "affected_versions": [
+            "<=6.1.10"
+        ]
+    },
+    "CVE-2022-22971": {
+        "weight": 74.0,
+        "type": "env",
+        "description": "Information leak vulnerability in Linux kernel's btrfs subsystem.",
+        "affected_versions": [
+            "<=5.16.5"
+        ]
+    },
+    "CVE-2021-46895": {
+        "weight": 70.0,
+        "type": "env",
+        "description": "Use-after-free vulnerability in the Linux kernel's fs/proc.",
+        "affected_versions": [
+            "<=5.16"
+        ]
+    },
+    "CVE-2021-43265": {
+        "weight": 83.0,
+        "type": "env",
+        "description": "Buffer overflow vulnerability in the Linux kernel's nft_set_elem_expr.",
+        "affected_versions": [
+            "<5.15.1"
+        ]
+    },
+    "CVE-2021-4155": {
+        "weight": 78.0,
+        "type": "env",
+        "description": "Vulnerability in the Linux kernel's btrfs filesystem.",
+        "affected_versions": [
+            "<5.10.5"
+        ]
+    },
+    "CVE-2021-20173": {
+        "weight": 72.0,
+        "type": "env",
+        "description": "Use-after-free vulnerability in the Linux kernel's netfilter subsystem.",
+        "affected_versions": [
+            "<=5.12"
+        ]
+    },
+    "CVE-2020-25707": {
+        "weight": 75.0,
+        "type": "env",
+        "description": "Privilege escalation vulnerability in the Linux kernel's ftrace.",
+        "affected_versions": [
+            "<=5.10"
+        ]
+    },
+    "CVE-2020-14364": {
+        "weight": 70.0,
+        "type": "env",
+        "description": "Out-of-bounds read in Linux kernel's nf_tables component.",
+        "affected_versions": [
+            "<=5.8.5"
+        ]
     }
 }

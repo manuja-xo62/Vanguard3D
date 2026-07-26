@@ -61,7 +61,7 @@ def fetch_cve_metadata(cve_id):
     }
 
 def update_cve_database():
-    # 1. Load existing DB
+    # Load existing DB
     if os.path.exists(DB_PATH):
         with open(DB_PATH, 'r') as f:
             cve_db = json.load(f)
@@ -80,7 +80,8 @@ def update_cve_database():
     # Scrape Akaoma for new IDs
     print("\n--- Scraping Akaoma for New Threats ---")
     try:
-        response = requests.get('https://www.akaoma.com/en/cert/', timeout=10)
+        # FIXED: Pointing back to the specific Docker threat feed
+        response = requests.get('https://cve.akaoma.com/vendor/docker', timeout=10)
         html_text = response.text
         # Regex extracts standard CVE IDs
         cve_matches = re.findall(r'(CVE-\d{4}-\d{4,7})', html_text)
