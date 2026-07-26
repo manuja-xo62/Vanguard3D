@@ -1,79 +1,103 @@
-import os
 import json
 import re
-import urllib.request
-import subprocess
+import requests
+import time
+import os
 
-AKAOMA_URL = "https://cve.akaoma.com/vendor/docker"
-CVE_DB_PATH = "cve_database.json"
+DB_PATH = 'cve_database.json'
 
-def fetch_akaoma_docker_cves():
-    """Scrapes live threat intelligence from Akaoma using standard library modules."""
-    print(f"[*] Connecting to live threat feed: {AKAOMA_URL}...")
+def fetch_cve_metadata(cve_id):
+    """
+    Queries the CIRCL Public CVE API to dynamically fetch real vulnerability data.
+    """
+    # Normalize ID to standard hyphen format for the API
+    normalized_id = cve_id.replace('_', '-')
+    api_url = f"https://cve.circl.lu/api/cve/{normalized_id}"
     
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0.0.0 Safari/537.36"
-    }
-    
-    scraped_cves = {}
-
+    print(f"[*] Fetching live metadata for {normalized_id}...")
     try:
-        req = urllib.request.Request(AKAOMA_URL, headers=headers)
-        with urllib.request.urlopen(req, timeout=12) as response:
-            html_text = response.read().decode('utf-8', errors='ignore')
-
-        # Extract all cve idenitfiers
-        cve_matches = re.findall(r'(CVE-\d{4}-\d{4,7})', html_text)
-        unique_cves = list(dict.fromkeys(cve_matches))
-
-        print(f"[+] Successfully extracted {len(unique_cves)} unique CVE identifiers from live feed.")
-
-        for cve_id in unique_cves:
-            scraped_cves[cve_id] = {
-                "weight": 80.0,
-                "type": "env_cve",
-                "description": f"Engine/Daemon vulnerability tracked under {cve_id}.",
-                "source": "Akaoma Live Threat Feed"
-            }
-
+        response = requests.get(api_url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data:
+                # 1. Fetch Real Description
+                description = data.get("summary", f"Vulnerability tracked under {normalized_id}.")
+                
+                # 2. Fetch CVSS Score & Calculate Weight (Scale 10.0 to 100.0)
+                cvss_score = data.get("cvss")
+                weight = float(cvss_score) * 10.0 if cvss_score else 70.0
+                
+                # 3. Extract Affected Versions (Parse from CPE strings)
+                affected_versions = []
+                cpes = data.get("vulnerable_configuration", [])
+                for cpe in cpes:
+                    parts = cpe.split(":")
+                    
+                    if len(parts) >= 6 and parts[5] != "*":
+                        affected_versions.append(f"<={parts[5]}")
+                
+                # Remove duplicates and limit to top 3 to keep DB clean
+                affected_versions = list(set(affected_versions))[:3]
+                if not affected_versions:
+                    affected_versions = ["<unknown>"]
+                    
+                return {
+                    "weight": round(weight, 1),
+                    "type": "env",  # Fixed to perfectly match your manual schema
+                    "description": description,
+                    "affected_versions": affected_versions,
+                    "source": "Akaoma / CIRCL Live Sync"
+                }
     except Exception as e:
-        print(f"[!] Warning: Failed to fetch online data ({e}). Preserving existing local database.")
-
-    return scraped_cves
-
+        print(f"[!] Failed to fetch {normalized_id}: {e}")
+        
+    # Absolute fallback if API is unreachable
+    return {
+        "weight": 70.0,
+        "type": "env",
+        "description": f"Vulnerability tracked under {normalized_id}.",
+        "affected_versions": ["<unknown>"],
+        "source": "Akaoma Live Threat Feed"
+    }
 
 def update_cve_database():
-    """Merges newly scraped CVEs into cve_database.json and triggers retrain loop."""
-    if os.path.exists(CVE_DB_PATH):
-        with open(CVE_DB_PATH, 'r') as f:
-            try:
-                db = json.load(f)
-            except json.JSONDecodeError:
-                db = {}
+    # 1. Load existing DB
+    if os.path.exists(DB_PATH):
+        with open(DB_PATH, 'r') as f:
+            cve_db = json.load(f)
     else:
-        db = {}
+        cve_db = {}
 
-    live_cves = fetch_akaoma_docker_cves()
+    #Repair existing corrupted stubs
+    print("--- Checking for Legacy Stubs to Repair ---")
+    for cve_id, data in list(cve_db.items()):
+        # Identify stubs by the generic type or placeholder description
+        if data.get("type") == "env_cve" or "Engine/Daemon vulnerability" in data.get("description", ""):
+            print(f"[*] Repairing legacy stub: {cve_id}")
+            cve_db[cve_id] = fetch_cve_metadata(cve_id)
+            time.sleep(1)
 
-    new_entries_count = 0
-    for cve_id, metadata in live_cves.items():
-        if cve_id not in db:
-            db[cve_id] = metadata
-            new_entries_count += 1
+    # Scrape Akaoma for new IDs
+    print("\n--- Scraping Akaoma for New Threats ---")
+    try:
+        response = requests.get('https://www.akaoma.com/en/cert/', timeout=10)
+        html_text = response.text
+        # Regex extracts standard CVE IDs
+        cve_matches = re.findall(r'(CVE-\d{4}-\d{4,7})', html_text)
+        unique_cves = list(set(cve_matches))
+        
+        for cve_id in unique_cves:
+            if cve_id not in cve_db:
+                cve_db[cve_id] = fetch_cve_metadata(cve_id)
+                time.sleep(1)
+    except Exception as e:
+        print(f"[!] Akaoma sync failed: {e}")
 
-    with open(CVE_DB_PATH, 'w') as f:
-        json.dump(db, f, indent=4)
+    #Save the repaired and updated DB
+    with open(DB_PATH, 'w') as f:
+        json.dump(cve_db, f, indent=4)
+        
+    print("\n[+] CVE Database successfully repaired and updated!")
 
-    print(f"[+] Knowledge base updated! Added {new_entries_count} new entries. Total database size: {len(db)} entries.")
-
-    print("\n[*] Initiating automated MLOps retrain loop...")
-    python_bin = os.path.join('venv', 'Scripts', 'python.exe') if os.path.exists(os.path.join('venv', 'Scripts', 'python.exe')) else 'python'
-    
-    if os.path.exists('dataset_builder.py'):
-        subprocess.run([python_bin, 'dataset_builder.py'])
-    
-    if os.path.exists('ml_engine.py'):
-        subprocess.run([python_bin, 'ml_engine.py'])
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     update_cve_database()
