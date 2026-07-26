@@ -1,0 +1,47 @@
+{
+    "ERR_ROOT_PRIV": {
+        "weight": 45.0,
+        "type": "sast",
+        "description": "Container explicitly running as root user."
+    },
+    "ERR_CURL_BASH": {
+        "weight": 40.0,
+        "type": "sast",
+        "description": "Piping unverified curl script directly to shell."
+    },
+    "CVE_2026_42306": {
+        "weight": 85.0,
+        "type": "env",
+        "description": "Race condition in docker cp allows arbitrary bind mount redirection.",
+        "affected_versions": [
+            "<29.5.1"
+        ]
+    },
+    "CVE_2026_5843": {
+        "weight": 95.0,
+        "type": "env",
+        "description": "Docker Model Runner MLX backend unconditional Python execution.",
+        "os": "macOS"
+    },
+    "CVE_2026_6406": {
+        "weight": 80.0,
+        "type": "env",
+        "description": "Docker CLI --use-api-socket flag bypasses Enhanced Container Isolation."
+    },
+    "CVE_2025_62725": {
+        "weight": 70.0,
+        "type": "env",
+        "description": "Docker Compose trusts OCI artifact paths, allowing file overwrites.",
+        "affected_versions": [
+            "<2.40.2"
+        ]
+    },
+    "CVE_2026_2664": {
+        "weight": 65.0,
+        "type": "env",
+        "description": "Out of bounds read in grpcfuse kernel module in Docker Desktop.",
+        "affected_versions": [
+            "<=4.61.0"
+        ]
+    }
+}
