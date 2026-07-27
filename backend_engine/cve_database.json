@@ -1,50 +1,7 @@
 {
-    "CVE_2020_35197": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-35197 - The official memcached docker images before 1.5.11-alpine (Alpine specific) contain a blank password for a root user. System\u2026",
-        "affected_versions": [
-            "<=1.5.11-alpine"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-35197)"
-    },
-    "CVE_2024_6222": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2024-6222 - In Docker Desktop before v4.29.0, an attacker who has gained access to the Docker Desktop VM through a container breakout can\u2026",
-        "affected_versions": [
-            "<=v4.29.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2024-6222)"
-    },
-    "CVE_2019_5736": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2019-5736 - runc through 1.0-rc6, as used in Docker before 18.09.2 and other products, allows attackers to overwrite the host runc binary (and\u2026",
-        "affected_versions": [
-            "<=18.09.2"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-5736)"
-    },
-    "CVE_2020_29575": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-29575 - The official elixir Docker images before 1.8.0-alpine (Alpine specific) contain a blank password for a root user. Systems using\u2026",
-        "affected_versions": [
-            "<=1.8.0-alpine"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-29575)"
-    },
-    "CVE_2023_5166": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2023-5166 - Docker Desktop before 4.23.0 allows Access Token theft via a crafted extension icon URL.\n\nThis issue affects Docker Desktop:\u2026",
-        "affected_versions": [
-            "<=4.23.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-5166)"
-    },
-    "CVE_2020_29601": {
+    "ERR_MEMCACHED_BLANK_PASSWORD": {
+        "descriptive_id": "ERR_MEMCACHED_BLANK_PASSWORD",
+        "cve_ref": "CVE-2020-29601",
         "weight": 31.0,
         "type": "env",
         "description": "CVE-2020-29601 - The official notary docker images before signer-0.6.1-1 contain a blank password for a root user. System using the notary docker\u2026",
@@ -53,43 +10,20 @@
         ],
         "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-29601)"
     },
-    "CVE_2014_0047": {
-        "weight": 30.0,
-        "type": "env",
-        "description": "CVE-2014-0047 - Docker before 1.5 allows local users to have unspecified impact via vectors involving unsafe /tmp usage.",
-        "affected_versions": [
-            "<=1.5"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-0047)"
-    },
-    "CVE_2021_21285": {
+    "ERR_DESKTOP_GAINED_ACCESS": {
         "weight": 31.0,
         "type": "env",
-        "description": "CVE-2021-21285 - In Docker before versions 9.03.15, 20.10.3 there is a vulnerability in which pulling an intentionally malformed Docker image\u2026",
+        "description": "CVE-2024-6222 - In Docker Desktop before v4.29.0, an attacker who has gained access to the Docker Desktop VM through a container breakout can\u2026",
         "affected_versions": [
-            "<=versions"
+            "<=v4.29.0"
         ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-21285)"
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2024-6222)",
+        "descriptive_id": "ERR_DESKTOP_GAINED_ACCESS",
+        "cve_ref": "CVE-2024-6222"
     },
-    "CVE_2023_0633": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2023-0633 - In Docker Desktop on Windows before 4.12.0 an argument injection to installer may result in local privilege escalation (LPE).This\u2026",
-        "affected_versions": [
-            "<=4.12.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-0633)"
-    },
-    "CVE_2026_6406": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2026-6406 - The Docker CLI --use-api-socket flag bypasses Enhanced Container Isolation (ECI) restrictions in Docker Desktop. When ECI is\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-6406)"
-    },
-    "CVE_2022_38730": {
+    "ERR_COMPOSE_PATH_TRAVERSAL": {
+        "descriptive_id": "ERR_COMPOSE_PATH_TRAVERSAL",
+        "cve_ref": "CVE-2022-38730",
         "weight": 31.0,
         "type": "env",
         "description": "CVE-2022-38730 - Docker Desktop for Windows before 4.6 allows attackers to overwrite any file through the windowscontainers/start dockerBackendV2\u2026",
@@ -98,571 +32,42 @@
         ],
         "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2022-38730)"
     },
-    "CVE_2026_33990": {
+    "ERR_DESKTOP_ALLOWS_ACCESS": {
         "weight": 31.0,
         "type": "env",
-        "description": "CVE-2026-33990 - Docker Model Runner (DMR) is software used to manage, run, and deploy AI models using Docker. Prior to version 1.1.25, Docker\u2026",
+        "description": "CVE-2023-5166 - Docker Desktop before 4.23.0 allows Access Token theft via a crafted extension icon URL.\n\nThis issue affects Docker Desktop:\u2026",
         "affected_versions": [
-            "<unknown>"
+            "<=4.23.0"
         ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-33990)"
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-5166)",
+        "descriptive_id": "ERR_DESKTOP_ALLOWS_ACCESS",
+        "cve_ref": "CVE-2023-5166"
     },
-    "CVE_2020_14298": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-14298 - The version of docker as released for Red Hat Enterprise Linux 7 Extras via RHBA-2020:0053 advisory included an incorrect version\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-14298)"
-    },
-    "CVE_2023_0626": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2023-0626 - Docker Desktop before 4.12.0 is vulnerable to RCE via query parameters in message-box route.\n\nThis issue affects Docker Desktop:\u2026",
-        "affected_versions": [
-            "<=4.12.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-0626)"
-    },
-    "CVE_2016_8867": {
+    "ERR_ALLOWS_LOCAL_USERS": {
+        "descriptive_id": "ERR_ALLOWS_LOCAL_USERS",
+        "cve_ref": "CVE-2014-0047",
         "weight": 30.0,
         "type": "env",
-        "description": "CVE-2016-8867 - Docker Engine 1.12.2 enabled ambient capabilities with misconfigured capability policies. This allowed malicious images to bypass\u2026",
+        "description": "CVE-2014-0047 - Docker before 1.5 allows local users to have unspecified impact via vectors involving unsafe /tmp usage.",
         "affected_versions": [
-            "<unknown>"
+            "<=1.5"
         ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2016-8867)"
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-0047)"
     },
-    "CVE_2022_23774": {
+    "ERR_THERE_PULLING_INTENTIONALLY": {
         "weight": 31.0,
         "type": "env",
-        "description": "CVE-2022-23774 - Docker Desktop before 4.4.4 on Windows allows attackers to move arbitrary files.",
-        "affected_versions": [
-            "<=4.4.4"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2022-23774)"
-    },
-    "CVE_2019_1020014": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2019-1020014 - docker-credential-helpers before 0.6.3 has a double free in the List functions.",
-        "affected_versions": [
-            "<=0.6.3"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-1020014)"
-    },
-    "CVE_2015_3629": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2015-3629 - Libcontainer 1.6.0, as used in Docker Engine, allows local users to escape containerization (&#34;mount namespace breakout&#34;) and write\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2015-3629)"
-    },
-    "CVE_2021_3162": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2021-3162 - Docker Desktop Community before 2.5.0.0 on macOS mishandles certificate checking, leading to local privilege escalation.",
-        "affected_versions": [
-            "<=2.5.0.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-3162)"
-    },
-    "CVE_2022_31647": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2022-31647 - Docker Desktop before 4.6.0 on Windows allows attackers to delete any file through the hyperv/destroy dockerBackendV2 API via a\u2026",
-        "affected_versions": [
-            "<=4.6.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2022-31647)"
-    },
-    "CVE_2021_37841": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2021-37841 - Docker Desktop before 3.6.0 suffers from incorrect access control. If a low-privileged account is able to access the server\u2026",
-        "affected_versions": [
-            "<=3.6.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-37841)"
-    },
-    "CVE_2020_13401": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-13401 - An issue was discovered in Docker Engine before 19.03.11. An attacker in a container, with the CAP_NET_RAW capability, can craft\u2026",
-        "affected_versions": [
-            "<=19.03.11."
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-13401)"
-    },
-    "CVE_2026_33997": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2026-33997 - Moby is an open source container framework. Prior to version 29.3.1, a security vulnerability has been detected that allows\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-33997)"
-    },
-    "CVE_2018_15514": {
-        "weight": 30.0,
-        "type": "env",
-        "description": "CVE-2018-15514 - HandleRequestAsync in Docker for Windows before 18.06.0-ce-rc3-win68 (edge) and before 18.06.0-ce-win72 (stable) deserialized\u2026",
-        "affected_versions": [
-            "<=18.06.0-ce-rc3-win68",
-            "<=18.06.0-ce-win72"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2018-15514)"
-    },
-    "CVE_2022_25365": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2022-25365 - Docker Desktop before 4.5.1 on Windows allows attackers to move arbitrary files. NOTE: this issue exists because of an incomplete\u2026",
-        "affected_versions": [
-            "<=4.5.1"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2022-25365)"
-    },
-    "CVE_2019_14271": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2019-14271 - In Docker 19.03.x before 19.03.1 linked against the GNU C Library (aka glibc), code injection can occur when the nsswitch\u2026",
-        "affected_versions": [
-            "<=19.03.1"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-14271)"
-    },
-    "CVE_2014_5282": {
-        "weight": 30.0,
-        "type": "env",
-        "description": "CVE-2014-5282 - Docker before 1.3 does not properly validate image IDs, which allows remote attackers to redirect to another image through the\u2026",
-        "affected_versions": [
-            "<=1.3"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-5282)"
-    },
-    "CVE_2014_9357": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "CVE-2014-9357 - Docker 1.3.2 allows remote attackers to execute arbitrary code with root privileges via a crafted (1) image or (2) build in a\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-9357)"
-    },
-    "CVE_2024_8695": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2024-8695 - A remote code execution (RCE) vulnerability via crafted extension description/changelog could be abused by a malicious extension\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2024-8695)"
-    },
-    "CVE_2026_5817": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2026-5817 - The vllm-metal inference backend in Docker Model Runner on macOS unconditionally sets trust_remote_code=True when loading model\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-5817)"
-    },
-    "CVE_2021_21284": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2021-21284 - In Docker before versions 9.03.15, 20.10.3 there is a vulnerability involving the --userns-remap option in which access to\u2026",
+        "description": "CVE-2021-21285 - In Docker before versions 9.03.15, 20.10.3 there is a vulnerability in which pulling an intentionally malformed Docker image\u2026",
         "affected_versions": [
             "<=versions"
         ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-21284)"
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-21285)",
+        "descriptive_id": "ERR_THERE_PULLING_INTENTIONALLY",
+        "cve_ref": "CVE-2021-21285"
     },
-    "CVE_2014_5277": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "CVE-2014-5277 - Docker before 1.3.1 and docker-py before 0.5.3 fall back to HTTP when the HTTPS connection to the registry fails, which allows\u2026",
-        "affected_versions": [
-            "<=1.3.1",
-            "<=0.5.3"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-5277)"
-    },
-    "CVE_2016_9962": {
-        "weight": 30.0,
-        "type": "env",
-        "description": "CVE-2016-9962 - RunC allowed additional container processes via &#39;runc exec&#39; to be ptraced by the pid 1 of the container.  This allows the main\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2016-9962)"
-    },
-    "CVE_2020_11492": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-11492 - An issue was discovered in Docker Desktop through 2.2.0.5 on Windows. If a local attacker sets up their own named pipe prior to\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-11492)"
-    },
-    "CVE_2020_35467": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-35467 - The Docker Docs Docker image through 2020-12-14 contains a blank password for the root user. Systems deployed using affected\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-35467)"
-    },
-    "CVE_2020_35184": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-35184 - The official composer docker images before 1.8.3 contain a blank password for a root user. System using the composer docker\u2026",
-        "affected_versions": [
-            "<=1.8.3"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-35184)"
-    },
-    "CVE_2020_14300": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-14300 - The docker packages version docker-1.13.1-108.git4ef4b30.el7 as released for Red Hat Enterprise Linux 7 Extras via RHBA-2020:0053\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-14300)"
-    },
-    "CVE_2020_29581": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-29581 - The official spiped docker images before 1.5-alpine contain a blank password for a root user. Systems using the spiped docker\u2026",
-        "affected_versions": [
-            "<=1.5-alpine"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-29581)"
-    },
-    "CVE_2022_26659": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2022-26659 - Docker Desktop installer on Windows in versions before 4.6.0 allows an attacker to overwrite any administrator writable files by\u2026",
-        "affected_versions": [
-            "<=4.6.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2022-26659)"
-    },
-    "CVE_2014_8178": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2014-8178 - Docker Engine before 1.8.3 and CS Docker Engine before 1.6.2-CS7 do not use a globally unique identifier to store image layers,\u2026",
-        "affected_versions": [
-            "<=1.6.2-CS7",
-            "<=1.8.3"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-8178)"
-    },
-    "CVE_2014_5278": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2014-5278 - A vulnerability exists in Docker before 1.2 via container names, which may collide with and override container IDs.",
-        "affected_versions": [
-            "<=1.2"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-5278)"
-    },
-    "CVE_2026_2664": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2026-2664 - An out of bounds read vulnerability in the grpcfuse kernel module present in the Linux VM in Docker Desktop for Windows, Linux and\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-2664)"
-    },
-    "CVE_2026_5843": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2026-5843 - The MLX inference backend in Docker Model Runner on macOS uses the MLX-LM library, which unconditionally imports and executes\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-5843)"
-    },
-    "CVE_2020_10665": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-10665 - Docker Desktop allows local privilege escalation to NT AUTHORITY\\SYSTEM because it mishandles the collection of diagnostics with\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-10665)"
-    },
-    "CVE_2016_3697": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2016-3697 - libcontainer/user/user.go in runC before 0.1.0, as used in Docker before 1.11.2, improperly treats a numeric UID as a potential\u2026",
-        "affected_versions": [
-            "<=1.11.2",
-            "<=0.1.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2016-3697)"
-    },
-    "CVE_2014_6407": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "CVE-2014-6407 - Docker before 1.3.2 allows remote attackers to write to arbitrary files and execute arbitrary code via a (1) symlink or (2) hard\u2026",
-        "affected_versions": [
-            "<=1.3.2"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-6407)"
-    },
-    "CVE_2023_0625": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2023-0625 - Docker Desktop before 4.12.0 is vulnerable to RCE via a crafted extension description or changelog.\n\nThis issue affects Docker\u2026",
-        "affected_versions": [
-            "<=4.12.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-0625)"
-    },
-    "CVE_2021_41092": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2021-41092 - Docker CLI is the command line interface for the docker container runtime. A bug was found in the Docker CLI where running\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-41092)"
-    },
-    "CVE_2025_3224": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2025-3224 - A vulnerability in the update process of Docker Desktop for Windows versions prior to 4.41.0\u00a0could allow a local, low-privileged\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2025-3224)"
-    },
-    "CVE_2026_41568": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2026-41568 - Moby is an open source container framework. In Docker Engine prior to version 29.5.1, Docker Daemon versions 28.5.2 and prior,\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-41568)"
-    },
-    "CVE_2023_0628": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2023-0628 - Docker Desktop before 4.17.0 allows an attacker to execute an arbitrary command inside a Dev Environments container during\u2026",
-        "affected_versions": [
-            "<=4.17.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-0628)"
-    },
-    "CVE_2018_10892": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2018-10892 - The default OCI linux spec in oci/defaults{_linux}.go in Docker/Moby from 1.11 to current does not block /proc/acpi pathnames.\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2018-10892)"
-    },
-    "CVE_2019_13509": {
-        "weight": 30.0,
-        "type": "env",
-        "description": "CVE-2019-13509 - In Docker CE and EE before 18.09.8 (as well as Docker EE before 17.06.2-ee-23 and 18.x before 18.03.1-ee-10), Docker Engine in\u2026",
-        "affected_versions": [
-            "<=17.06.2-ee-23",
-            "<=18.03.1-ee-10",
-            "<=18.09.8"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-13509)"
-    },
-    "CVE_2015_3631": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "CVE-2015-3631 - Docker Engine before 1.6.1 allows local users to set arbitrary Linux Security Modules (LSM) and docker_t policies via an image\u2026",
-        "affected_versions": [
-            "<=1.6.1"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2015-3631)"
-    },
-    "CVE_2014_3499": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "CVE-2014-3499 - Docker 1.0.0 uses world-readable and world-writable permissions on the management socket, which allows local users to gain\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-3499)"
-    },
-    "CVE_2024_8696": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2024-8696 - A remote code execution (RCE) vulnerability via crafted extension publisher-url/additional-urls could be abused by a malicious\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2024-8696)"
-    },
-    "CVE_2016_6595": {
-        "weight": 30.0,
-        "type": "env",
-        "description": "CVE-2016-6595 - The SwarmKit toolkit 1.12.0 for Docker allows remote authenticated users to cause a denial of service (prevention of cluster\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2016-6595)"
-    },
-    "CVE_2020_35196": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-35196 - The official rabbitmq docker images before 3.7.13-beta.1-management-alpine (Alpine specific) contain a blank password for a root\u2026",
-        "affected_versions": [
-            "<=3.7.13-beta.1-management-alpine"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-35196)"
-    },
-    "CVE_2019_15752": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2019-15752 - Docker Desktop Community Edition before 2.1.0.1 allows local users to gain privileges by placing a Trojan horse\u2026",
-        "affected_versions": [
-            "<=2.1.0.1"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-15752)"
-    },
-    "CVE_2018_15664": {
-        "weight": 30.0,
-        "type": "env",
-        "description": "CVE-2018-15664 - In Docker through 18.06.1-ce-rc2, the API endpoints behind the &#39;docker cp&#39; command are vulnerable to a symlink-exchange attack\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2018-15664)"
-    },
-    "CVE_2023_40453": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2023-40453 - Docker Machine through 0.16.2 allows an attacker, who has control of a worker node, to provide crafted version data, which might\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-40453)"
-    },
-    "CVE_2022_37326": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2022-37326 - Docker Desktop for Windows before 4.6.0 allows attackers to delete (or create) any file through the dockerBackendV2\u2026",
-        "affected_versions": [
-            "<=4.6.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2022-37326)"
-    },
-    "CVE_2020_27534": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-27534 - util/binfmt_misc/check.go in Builder in Docker Engine before 19.03.9 calls os.OpenFile with a potentially unsafe qemu-check\u2026",
-        "affected_versions": [
-            "<=19.03.9"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-27534)"
-    },
-    "CVE_2023_1802": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2023-1802 - In Docker Desktop 4.17.x the Artifactory Integration falls back to sending registry credentials over plain HTTP if the HTTPS\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-1802)"
-    },
-    "CVE_2020_29389": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-29389 - The official Crux Linux Docker images 3.0 through 3.4 contain a blank password for a root user. System using the Crux Linux\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-29389)"
-    },
-    "CVE_2026_34040": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2026-34040 - Moby is an open source container framework. Prior to version 29.3.1, a security vulnerability has been detected that allows\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-34040)"
-    },
-    "CVE_2025_13743": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2025-13743 - Docker Desktop diagnostics bundles were found to include expired Hub PATs in log output due to error object serialization. This\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2025-13743)"
-    },
-    "CVE_2014_9358": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "CVE-2014-9358 - Docker before 1.3.3 does not properly validate image IDs, which allows remote attackers to conduct path traversal attacks and\u2026",
-        "affected_versions": [
-            "<=1.3.3"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-9358)"
-    },
-    "CVE_2014_9356": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2014-9356 - Path traversal vulnerability in Docker before 1.3.3 allows remote attackers to write to arbitrary files and bypass a container\u2026",
-        "affected_versions": [
-            "<=1.3.3"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-9356)"
-    },
-    "CVE_2014_0048": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2014-0048 - An issue was found in Docker before 1.6.0. Some programs and scripts in Docker are downloaded via HTTP and then executed or used\u2026",
-        "affected_versions": [
-            "<=1.6.0."
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-0048)"
-    },
-    "CVE_2020_35186": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-35186 - The official adminer docker images before 4.7.0-fastcgi contain a blank password for a root user. System using the adminer docker\u2026",
-        "affected_versions": [
-            "<=4.7.0-fastcgi"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-35186)"
-    },
-    "CVE_2026_42306": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2026-42306 - Moby is an open source container framework. In Docker Engine prior to version 29.5.1, Docker Daemon versions 28.5.2 and prior,\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-42306)"
-    },
-    "CVE_2020_35185": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-35185 - The official ghost docker images before 2.16.1-alpine (Alpine specific) contain a blank password for a root user. System using\u2026",
-        "affected_versions": [
-            "<=2.16.1-alpine"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-35185)"
-    },
-    "CVE_2020_15360": {
+    "ERR_PRIVILEGE_ESCALATION": {
+        "descriptive_id": "ERR_PRIVILEGE_ESCALATION",
+        "cve_ref": "CVE-2020-15360",
         "weight": 31.0,
         "type": "env",
         "description": "CVE-2020-15360 - com.docker.vmnetd in Docker Desktop 2.3.0.3 allows privilege escalation because of a lack of client verification.",
@@ -671,70 +76,486 @@
         ],
         "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-15360)"
     },
-    "CVE_2025_15558": {
+    "ERR_CONTAINER_ISOLATION_BYPASS": {
+        "descriptive_id": "ERR_CONTAINER_ISOLATION_BYPASS",
+        "cve_ref": "CVE-2016-8867",
+        "weight": 30.0,
+        "type": "env",
+        "description": "CVE-2016-8867 - Docker Engine 1.12.2 enabled ambient capabilities with misconfigured capability policies. This allowed malicious images to bypass\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2016-8867)"
+    },
+    "ERR_MODEL_RUNNER_SOFTWARE": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2026-33990 - Docker Model Runner (DMR) is software used to manage, run, and deploy AI models using Docker. Prior to version 1.1.25, Docker\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-33990)",
+        "descriptive_id": "ERR_MODEL_RUNNER_SOFTWARE",
+        "cve_ref": "CVE-2026-33990"
+    },
+    "ERR_RELEASED_ENTERPRISE_LINUX": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2020-14298 - The version of docker as released for Red Hat Enterprise Linux 7 Extras via RHBA-2020:0053 advisory included an incorrect version\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-14298)",
+        "descriptive_id": "ERR_RELEASED_ENTERPRISE_LINUX",
+        "cve_ref": "CVE-2020-14298"
+    },
+    "ERR_DESKTOP_VULNERABLE_QUERY": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2023-0626 - Docker Desktop before 4.12.0 is vulnerable to RCE via query parameters in message-box route.\n\nThis issue affects Docker Desktop:\u2026",
+        "affected_versions": [
+            "<=4.12.0"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-0626)",
+        "descriptive_id": "ERR_DESKTOP_VULNERABLE_QUERY",
+        "cve_ref": "CVE-2023-0626"
+    },
+    "ERR_DESKTOP_WINDOWS_ALLOWS": {
+        "descriptive_id": "ERR_DESKTOP_WINDOWS_ALLOWS",
+        "cve_ref": "CVE-2022-23774",
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2022-23774 - Docker Desktop before 4.4.4 on Windows allows attackers to move arbitrary files.",
+        "affected_versions": [
+            "<=4.4.4"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2022-23774)"
+    },
+    "ERR_CREDENTIAL_HELPERS_DOUBLE": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2019-1020014 - docker-credential-helpers before 0.6.3 has a double free in the List functions.",
+        "affected_versions": [
+            "<=0.6.3"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-1020014)",
+        "descriptive_id": "ERR_CREDENTIAL_HELPERS_DOUBLE",
+        "cve_ref": "CVE-2019-1020014"
+    },
+    "ERR_LIBCONTAINER_USED_ALLOWS": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2015-3629 - Libcontainer 1.6.0, as used in Docker Engine, allows local users to escape containerization (&#34;mount namespace breakout&#34;) and write\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2015-3629)",
+        "descriptive_id": "ERR_LIBCONTAINER_USED_ALLOWS",
+        "cve_ref": "CVE-2015-3629"
+    },
+    "ERR_DESKTOP_SUFFERS_FROM": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2021-37841 - Docker Desktop before 3.6.0 suffers from incorrect access control. If a low-privileged account is able to access the server\u2026",
+        "affected_versions": [
+            "<=3.6.0"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-37841)",
+        "descriptive_id": "ERR_DESKTOP_SUFFERS_FROM",
+        "cve_ref": "CVE-2021-37841"
+    },
+    "ERR_ISSUE_DISCOVERED_WITH": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2020-13401 - An issue was discovered in Docker Engine before 19.03.11. An attacker in a container, with the CAP_NET_RAW capability, can craft\u2026",
+        "affected_versions": [
+            "<=19.03.11."
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-13401)",
+        "descriptive_id": "ERR_ISSUE_DISCOVERED_WITH",
+        "cve_ref": "CVE-2020-13401"
+    },
+    "ERR_OPEN_SOURCE_FRAMEWORK": {
+        "descriptive_id": "ERR_OPEN_SOURCE_FRAMEWORK",
+        "cve_ref": "CVE-2026-34040",
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2026-34040 - Moby is an open source container framework. Prior to version 29.3.1, a security vulnerability has been detected that allows\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-34040)"
+    },
+    "ERR_HANDLEREQUESTASYNC_WINDOWS_EDGE": {
+        "weight": 30.0,
+        "type": "env",
+        "description": "CVE-2018-15514 - HandleRequestAsync in Docker for Windows before 18.06.0-ce-rc3-win68 (edge) and before 18.06.0-ce-win72 (stable) deserialized\u2026",
+        "affected_versions": [
+            "<=18.06.0-ce-rc3-win68",
+            "<=18.06.0-ce-win72"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2018-15514)",
+        "descriptive_id": "ERR_HANDLEREQUESTASYNC_WINDOWS_EDGE",
+        "cve_ref": "CVE-2018-15514"
+    },
+    "ERR_LINKED_AGAINST_LIBRARY": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2019-14271 - In Docker 19.03.x before 19.03.1 linked against the GNU C Library (aka glibc), code injection can occur when the nsswitch\u2026",
+        "affected_versions": [
+            "<=19.03.1"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-14271)",
+        "descriptive_id": "ERR_LINKED_AGAINST_LIBRARY",
+        "cve_ref": "CVE-2019-14271"
+    },
+    "ERR_DOES_PROPERLY_VALIDATE": {
+        "descriptive_id": "ERR_DOES_PROPERLY_VALIDATE",
+        "cve_ref": "CVE-2014-5282",
+        "weight": 30.0,
+        "type": "env",
+        "description": "CVE-2014-5282 - Docker before 1.3 does not properly validate image IDs, which allows remote attackers to redirect to another image through the\u2026",
+        "affected_versions": [
+            "<=1.3"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-5282)"
+    },
+    "ERR_ALLOWS_ATTACKERS_EXECUTE": {
+        "weight": 70.0,
+        "type": "env",
+        "description": "CVE-2014-9357 - Docker 1.3.2 allows remote attackers to execute arbitrary code with root privileges via a crafted (1) image or (2) build in a\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-9357)",
+        "descriptive_id": "ERR_ALLOWS_ATTACKERS_EXECUTE",
+        "cve_ref": "CVE-2014-9357"
+    },
+    "ERR_CODE_EXECUTION_CRAFTED": {
+        "descriptive_id": "ERR_CODE_EXECUTION_CRAFTED",
+        "cve_ref": "CVE-2024-8695",
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2024-8695 - A remote code execution (RCE) vulnerability via crafted extension description/changelog could be abused by a malicious extension\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2024-8695)"
+    },
+    "ERR_VLLM_METAL_INFERENCE": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2026-5817 - The vllm-metal inference backend in Docker Model Runner on macOS unconditionally sets trust_remote_code=True when loading model\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-5817)",
+        "descriptive_id": "ERR_VLLM_METAL_INFERENCE",
+        "cve_ref": "CVE-2026-5817"
+    },
+    "ERR_THERE_INVOLVING_USERNS": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2021-21284 - In Docker before versions 9.03.15, 20.10.3 there is a vulnerability involving the --userns-remap option in which access to\u2026",
+        "affected_versions": [
+            "<=versions"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-21284)",
+        "descriptive_id": "ERR_THERE_INVOLVING_USERNS",
+        "cve_ref": "CVE-2021-21284"
+    },
+    "ERR_FALL_BACK_HTTP": {
+        "weight": 70.0,
+        "type": "env",
+        "description": "CVE-2014-5277 - Docker before 1.3.1 and docker-py before 0.5.3 fall back to HTTP when the HTTPS connection to the registry fails, which allows\u2026",
+        "affected_versions": [
+            "<=1.3.1",
+            "<=0.5.3"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-5277)",
+        "descriptive_id": "ERR_FALL_BACK_HTTP",
+        "cve_ref": "CVE-2014-5277"
+    },
+    "ERR_RUNC_ALLOWED_ADDITIONAL": {
+        "weight": 30.0,
+        "type": "env",
+        "description": "CVE-2016-9962 - RunC allowed additional container processes via &#39;runc exec&#39; to be ptraced by the pid 1 of the container.  This allows the main\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2016-9962)",
+        "descriptive_id": "ERR_RUNC_ALLOWED_ADDITIONAL",
+        "cve_ref": "CVE-2016-9962"
+    },
+    "ERR_ISSUE_DISCOVERED_DESKTOP": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2020-11492 - An issue was discovered in Docker Desktop through 2.2.0.5 on Windows. If a local attacker sets up their own named pipe prior to\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-11492)",
+        "descriptive_id": "ERR_ISSUE_DISCOVERED_DESKTOP",
+        "cve_ref": "CVE-2020-11492"
+    },
+    "ERR_PACKAGES_RELEASED_ENTERPRISE": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2020-14300 - The docker packages version docker-1.13.1-108.git4ef4b30.el7 as released for Red Hat Enterprise Linux 7 Extras via RHBA-2020:0053\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-14300)",
+        "descriptive_id": "ERR_PACKAGES_RELEASED_ENTERPRISE",
+        "cve_ref": "CVE-2020-14300"
+    },
+    "ERR_GLOBALLY_UNIQUE_IDENTIFIER": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2014-8178 - Docker Engine before 1.8.3 and CS Docker Engine before 1.6.2-CS7 do not use a globally unique identifier to store image layers,\u2026",
+        "affected_versions": [
+            "<=1.6.2-CS7",
+            "<=1.8.3"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-8178)",
+        "descriptive_id": "ERR_GLOBALLY_UNIQUE_IDENTIFIER",
+        "cve_ref": "CVE-2014-8178"
+    },
+    "ERR_EXISTS_NAMES_COLLIDE": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2014-5278 - A vulnerability exists in Docker before 1.2 via container names, which may collide with and override container IDs.",
+        "affected_versions": [
+            "<=1.2"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-5278)",
+        "descriptive_id": "ERR_EXISTS_NAMES_COLLIDE",
+        "cve_ref": "CVE-2014-5278"
+    },
+    "ERR_BOUNDS_READ_GRPCFUSE": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2026-2664 - An out of bounds read vulnerability in the grpcfuse kernel module present in the Linux VM in Docker Desktop for Windows, Linux and\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-2664)",
+        "descriptive_id": "ERR_BOUNDS_READ_GRPCFUSE",
+        "cve_ref": "CVE-2026-2664"
+    },
+    "ERR_INFERENCE_BACKEND_MODEL": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2026-5843 - The MLX inference backend in Docker Model Runner on macOS uses the MLX-LM library, which unconditionally imports and executes\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-5843)",
+        "descriptive_id": "ERR_INFERENCE_BACKEND_MODEL",
+        "cve_ref": "CVE-2026-5843"
+    },
+    "ERR_LIBCONTAINER_USER_USER": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2016-3697 - libcontainer/user/user.go in runC before 0.1.0, as used in Docker before 1.11.2, improperly treats a numeric UID as a potential\u2026",
+        "affected_versions": [
+            "<=1.11.2",
+            "<=0.1.0"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2016-3697)",
+        "descriptive_id": "ERR_LIBCONTAINER_USER_USER",
+        "cve_ref": "CVE-2016-3697"
+    },
+    "ERR_ALLOWS_ATTACKERS_WRITE": {
+        "weight": 70.0,
+        "type": "env",
+        "description": "CVE-2014-6407 - Docker before 1.3.2 allows remote attackers to write to arbitrary files and execute arbitrary code via a (1) symlink or (2) hard\u2026",
+        "affected_versions": [
+            "<=1.3.2"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-6407)",
+        "descriptive_id": "ERR_ALLOWS_ATTACKERS_WRITE",
+        "cve_ref": "CVE-2014-6407"
+    },
+    "ERR_DESKTOP_VULNERABLE_CRAFTED": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2023-0625 - Docker Desktop before 4.12.0 is vulnerable to RCE via a crafted extension description or changelog.\n\nThis issue affects Docker\u2026",
+        "affected_versions": [
+            "<=4.12.0"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-0625)",
+        "descriptive_id": "ERR_DESKTOP_VULNERABLE_CRAFTED",
+        "cve_ref": "CVE-2023-0625"
+    },
+    "ERR_COMMAND_LINE_INTERFACE": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2021-41092 - Docker CLI is the command line interface for the docker container runtime. A bug was found in the Docker CLI where running\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-41092)",
+        "descriptive_id": "ERR_COMMAND_LINE_INTERFACE",
+        "cve_ref": "CVE-2021-41092"
+    },
+    "ERR_UPDATE_PROCESS_DESKTOP": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2025-3224 - A vulnerability in the update process of Docker Desktop for Windows versions prior to 4.41.0\u00a0could allow a local, low-privileged\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2025-3224)",
+        "descriptive_id": "ERR_UPDATE_PROCESS_DESKTOP",
+        "cve_ref": "CVE-2025-3224"
+    },
+    "ERR_DESKTOP_ALLOWS_EXECUTE": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2023-0628 - Docker Desktop before 4.17.0 allows an attacker to execute an arbitrary command inside a Dev Environments container during\u2026",
+        "affected_versions": [
+            "<=4.17.0"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-0628)",
+        "descriptive_id": "ERR_DESKTOP_ALLOWS_EXECUTE",
+        "cve_ref": "CVE-2023-0628"
+    },
+    "ERR_DEFAULT_LINUX_SPEC": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2018-10892 - The default OCI linux spec in oci/defaults{_linux}.go in Docker/Moby from 1.11 to current does not block /proc/acpi pathnames.\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2018-10892)",
+        "descriptive_id": "ERR_DEFAULT_LINUX_SPEC",
+        "cve_ref": "CVE-2018-10892"
+    },
+    "ERR_WELL": {
+        "weight": 30.0,
+        "type": "env",
+        "description": "CVE-2019-13509 - In Docker CE and EE before 18.09.8 (as well as Docker EE before 17.06.2-ee-23 and 18.x before 18.03.1-ee-10), Docker Engine in\u2026",
+        "affected_versions": [
+            "<=17.06.2-ee-23",
+            "<=18.03.1-ee-10",
+            "<=18.09.8"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-13509)",
+        "descriptive_id": "ERR_WELL",
+        "cve_ref": "CVE-2019-13509"
+    },
+    "ERR_SWARMKIT_TOOLKIT_ALLOWS": {
+        "weight": 30.0,
+        "type": "env",
+        "description": "CVE-2016-6595 - The SwarmKit toolkit 1.12.0 for Docker allows remote authenticated users to cause a denial of service (prevention of cluster\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2016-6595)",
+        "descriptive_id": "ERR_SWARMKIT_TOOLKIT_ALLOWS",
+        "cve_ref": "CVE-2016-6595"
+    },
+    "ERR_DESKTOP_COMMUNITY_EDITION": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2019-15752 - Docker Desktop Community Edition before 2.1.0.1 allows local users to gain privileges by placing a Trojan horse\u2026",
+        "affected_versions": [
+            "<=2.1.0.1"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-15752)",
+        "descriptive_id": "ERR_DESKTOP_COMMUNITY_EDITION",
+        "cve_ref": "CVE-2019-15752"
+    },
+    "ERR_THROUGH_ENDPOINTS_BEHIND": {
+        "weight": 30.0,
+        "type": "env",
+        "description": "CVE-2018-15664 - In Docker through 18.06.1-ce-rc2, the API endpoints behind the &#39;docker cp&#39; command are vulnerable to a symlink-exchange attack\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2018-15664)",
+        "descriptive_id": "ERR_THROUGH_ENDPOINTS_BEHIND",
+        "cve_ref": "CVE-2018-15664"
+    },
+    "ERR_MACHINE_THROUGH_ALLOWS": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2023-40453 - Docker Machine through 0.16.2 allows an attacker, who has control of a worker node, to provide crafted version data, which might\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-40453)",
+        "descriptive_id": "ERR_MACHINE_THROUGH_ALLOWS",
+        "cve_ref": "CVE-2023-40453"
+    },
+    "ERR_UTIL_CHECK_BUILDER": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2020-27534 - util/binfmt_misc/check.go in Builder in Docker Engine before 19.03.9 calls os.OpenFile with a potentially unsafe qemu-check\u2026",
+        "affected_versions": [
+            "<=19.03.9"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-27534)",
+        "descriptive_id": "ERR_UTIL_CHECK_BUILDER",
+        "cve_ref": "CVE-2020-27534"
+    },
+    "ERR_DESKTOP_ARTIFACTORY_INTEGRATION": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2023-1802 - In Docker Desktop 4.17.x the Artifactory Integration falls back to sending registry credentials over plain HTTP if the HTTPS\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-1802)",
+        "descriptive_id": "ERR_DESKTOP_ARTIFACTORY_INTEGRATION",
+        "cve_ref": "CVE-2023-1802"
+    },
+    "ERR_DESKTOP_DIAGNOSTICS_BUNDLES": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2025-13743 - Docker Desktop diagnostics bundles were found to include expired Hub PATs in log output due to error object serialization. This\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2025-13743)",
+        "descriptive_id": "ERR_DESKTOP_DIAGNOSTICS_BUNDLES",
+        "cve_ref": "CVE-2025-13743"
+    },
+    "ERR_ISSUE_FOUND_SOME": {
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2014-0048 - An issue was found in Docker before 1.6.0. Some programs and scripts in Docker are downloaded via HTTP and then executed or used\u2026",
+        "affected_versions": [
+            "<=1.6.0."
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-0048)",
+        "descriptive_id": "ERR_ISSUE_FOUND_SOME",
+        "cve_ref": "CVE-2014-0048"
+    },
+    "ERR_WINDOWS_SEARCHES_PLUGIN": {
         "weight": 31.0,
         "type": "env",
         "description": "CVE-2025-15558 - Docker CLI for Windows searches for plugin binaries in C:\\ProgramData\\Docker\\cli-plugins, a directory that does not exist by\u2026",
         "affected_versions": [
             "<unknown>"
         ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2025-15558)"
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2025-15558)",
+        "descriptive_id": "ERR_WINDOWS_SEARCHES_PLUGIN",
+        "cve_ref": "CVE-2025-15558"
     },
-    "CVE_2023_5165": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2023-5165 - Docker Desktop before 4.23.0 allows an unprivileged user to bypass Enhanced Container Isolation (ECI) restrictions via the debug\u2026",
-        "affected_versions": [
-            "<=4.23.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-5165)"
-    },
-    "CVE_2015_3630": {
+    "ERR_USES_WEAK_PERMISSIONS": {
         "weight": 70.0,
         "type": "env",
         "description": "CVE-2015-3630 - Docker Engine before 1.6.1 uses weak permissions for (1) /proc/asound, (2) /proc/timer_stats, (3) /proc/latency_stats, and (4)\u2026",
         "affected_versions": [
             "<=1.6.1"
         ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2015-3630)"
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2015-3630)",
+        "descriptive_id": "ERR_USES_WEAK_PERMISSIONS",
+        "cve_ref": "CVE-2015-3630"
     },
-    "CVE_2020_35195": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-35195 - The official haproxy docker images before 1.8.18-alpine (Alpine specific) contain a blank password for a root user. System using\u2026",
-        "affected_versions": [
-            "<=1.8.18-alpine"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-35195)"
-    },
-    "CVE_2023_0627": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2023-0627 - Docker Desktop 4.11.x allows --no-windows-containers flag bypass via IPC response spoofing which may lead to Local Privilege\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-0627)"
-    },
-    "CVE_2023_0629": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2023-0629 - Docker Desktop before 4.17.0 allows an unprivileged user to bypass Enhanced Container Isolation (ECI) restrictions by setting the\u2026",
-        "affected_versions": [
-            "<=4.17.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2023-0629)"
-    },
-    "CVE_2022_34292": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2022-34292 - Docker Desktop for Windows before 4.6.0 allows attackers to overwrite any file through a symlink attack on the hyperv/create\u2026",
-        "affected_versions": [
-            "<=4.6.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2022-34292)"
-    },
-    "CVE_2015_3627": {
+    "ERR_LIBCONTAINER_OPENS_FILE": {
         "weight": 70.0,
         "type": "env",
         "description": "CVE-2015-3627 - Libcontainer and Docker Engine before 1.6.1 opens the file-descriptor passed to the pid-1 process before performing the chroot,\u2026",
@@ -742,72 +563,57 @@
             "<=1.6.1",
             "<=performing"
         ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2015-3627)"
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2015-3627)",
+        "descriptive_id": "ERR_LIBCONTAINER_OPENS_FILE",
+        "cve_ref": "CVE-2015-3627"
     },
-    "CVE_2017_14992": {
+    "ERR_LACK_CONTENT_VERIFICATION": {
         "weight": 30.0,
         "type": "env",
         "description": "CVE-2017-14992 - Lack of content verification in Docker-CE (Also known as Moby) versions 1.12.6-0, 1.10.3, 17.03.0, 17.03.1, 17.03.2, 17.06.0,\u2026",
         "affected_versions": [
             "<unknown>"
         ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2017-14992)"
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2017-14992)",
+        "descriptive_id": "ERR_LACK_CONTENT_VERIFICATION",
+        "cve_ref": "CVE-2017-14992"
     },
-    "CVE_2020_29591": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-29591 - Versions of the Official registry Docker images through 2.7.0 contain a blank password for the root user. Systems deployed using\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-29591)"
-    },
-    "CVE_2021_44719": {
+    "ERR_DESKTOP_INCORRECT_ACCESS": {
         "weight": 31.0,
         "type": "env",
         "description": "CVE-2021-44719 - Docker Desktop 4.3.0 has Incorrect Access Control.",
         "affected_versions": [
             "<unknown>"
         ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-44719)"
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-44719)",
+        "descriptive_id": "ERR_DESKTOP_INCORRECT_ACCESS",
+        "cve_ref": "CVE-2021-44719"
     },
-    "CVE_2024_5652": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2024-5652 - In Docker Desktop on Windows before v4.31.0\u00a0allows a user in the docker-users\u00a0group to cause a Windows Denial-of-Service through\u2026",
-        "affected_versions": [
-            "<=v4.31.0"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2024-5652)"
-    },
-    "CVE_2021_45449": {
+    "ERR_DESKTOP_THAT_SENSITIVE": {
         "weight": 31.0,
         "type": "env",
         "description": "CVE-2021-45449 - Docker Desktop version 4.3.0 and 4.3.1 has a bug that may log sensitive information (access token or password) on the user&#39;s\u2026",
         "affected_versions": [
             "<unknown>"
         ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-45449)"
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2021-45449)",
+        "descriptive_id": "ERR_DESKTOP_THAT_SENSITIVE",
+        "cve_ref": "CVE-2021-45449"
     },
-    "CVE_2019_13139": {
+    "ERR_CAPABLE_SUPPLYING_MANIPULATING": {
         "weight": 30.0,
         "type": "env",
         "description": "CVE-2019-13139 - In Docker before 18.09.4, an attacker who is capable of supplying or manipulating the build path for the &#34;docker build&#34; command\u2026",
         "affected_versions": [
             "<=18.09.4"
         ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-13139)"
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-13139)",
+        "descriptive_id": "ERR_CAPABLE_SUPPLYING_MANIPULATING",
+        "cve_ref": "CVE-2019-13139"
     },
-    "CVE_2019_16884": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2019-16884 - runc through 1.0.0-rc8, as used in Docker through 19.03.2-ce and other products, allows AppArmor restriction bypass because\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2019-16884)"
-    },
-    "CVE_2018_20699": {
+    "ERR_KERNEL_MEMORY_READ": {
+        "descriptive_id": "ERR_KERNEL_MEMORY_READ",
+        "cve_ref": "CVE-2018-20699",
         "weight": 30.0,
         "type": "env",
         "description": "CVE-2018-20699 - Docker Engine before 18.09 allows attackers to cause a denial of service (dockerd memory consumption) via a large integer in a\u2026",
@@ -815,34 +621,6 @@
             "<=18.09"
         ],
         "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2018-20699)"
-    },
-    "CVE_2014_8179": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2014-8179 - Docker Engine before 1.8.3 and CS Docker Engine before 1.6.2-CS7 does not properly validate and extract the manifest object from\u2026",
-        "affected_versions": [
-            "<=1.6.2-CS7",
-            "<=1.8.3"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-8179)"
-    },
-    "CVE_2020_29580": {
-        "weight": 31.0,
-        "type": "env",
-        "description": "CVE-2020-29580 - The official storm Docker images before 1.2.1 contain a blank password for a root user. Systems using the Storm Docker container\u2026",
-        "affected_versions": [
-            "<=1.2.1"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2020-29580)"
-    },
-    "CVE_2014_6408": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "CVE-2014-6408 - Docker 1.3.0 through 1.3.1 allows remote attackers to modify the default run profile of image containers and possibly bypass the\u2026",
-        "affected_versions": [
-            "<unknown>"
-        ],
-        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2014-6408)"
     },
     "ERR_ROOT_PRIV": {
         "weight": 45.0,
@@ -854,366 +632,206 @@
         "type": "sast",
         "description": "Piping unverified curl script directly to shell."
     },
-    "CVE_2025_62725": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "Docker Compose insecurely trusts OCI artifact paths, allowing malicious remote layers to overwrite host files.",
-        "affected_versions": [
-            "<2.40.2",
-            "<=2.20.1"
-        ],
-        "source": "VanguardNode Verified Intel"
-    },
-    "CVE-2025-37877": {
-        "weight": 85.0,
-        "type": "env",
-        "description": "Linux Kernel vulnerability allowing privilege escalation.",
-        "affected_versions": [
-            "<6.7.2"
-        ]
-    },
-    "CVE-2025-26954": {
-        "weight": 78.0,
-        "type": "env",
-        "description": "Libc pathname resolution bypass vulnerability.",
-        "affected_versions": [
-            "<2.39"
-        ]
-    },
-    "CVE-2024-8283": {
+    "ERR_PIPEFS_INFORMATION_LEAK": {
         "weight": 72.0,
         "type": "env",
         "description": "Pipefs information leak in Linux Kernel.",
         "affected_versions": [
             "<6.10.9"
-        ]
+        ],
+        "descriptive_id": "ERR_PIPEFS_INFORMATION_LEAK",
+        "cve_ref": "CVE-2024-8283"
     },
-    "CVE-2024-3094": {
+    "ERR_CRITICAL_BUFFER_OVERFLOW": {
         "weight": 99.0,
         "type": "env",
         "description": "Critical buffer overflow in XZ Utils (supply chain attack).",
         "affected_versions": [
             "<5.6.1"
-        ]
+        ],
+        "descriptive_id": "ERR_CRITICAL_BUFFER_OVERFLOW",
+        "cve_ref": "CVE-2024-3094"
     },
-    "CVE-2024-8784": {
+    "ERR_LINUX_KERNEL_SCHED": {
         "weight": 75.0,
         "type": "env",
         "description": "Vulnerability in the Linux kernel's sched/core component.",
         "affected_versions": [
             "<=6.10.6"
-        ]
+        ],
+        "descriptive_id": "ERR_LINUX_KERNEL_SCHED",
+        "cve_ref": "CVE-2024-8784"
     },
-    "CVE-2024-31497": {
-        "weight": 82.0,
-        "type": "env",
-        "description": "Memory safety bug in Archivemount utility.",
-        "affected_versions": [
-            "<1.0.7"
-        ]
-    },
-    "CVE-2024-28085": {
+    "ERR_CRITICAL_LINUX_KERNEL": {
         "weight": 76.0,
         "type": "env",
         "description": "Critical vulnerability in Linux kernel's io_uring interface.",
         "affected_versions": [
             "<=6.10.11"
-        ]
+        ],
+        "descriptive_id": "ERR_CRITICAL_LINUX_KERNEL",
+        "cve_ref": "CVE-2024-28085"
     },
-    "CVE-2024-5691": {
-        "weight": 71.0,
-        "type": "env",
-        "description": "Information disclosure vulnerability in Linux kernel's netfilter.",
-        "affected_versions": [
-            "<=6.9.9"
-        ]
-    },
-    "CVE-2024-2715": {
-        "weight": 88.0,
-        "type": "env",
-        "description": "Privilege escalation vulnerability in the Linux kernel's netfilter.",
-        "affected_versions": [
-            "<6.10"
-        ]
-    },
-    "CVE-2023-6931": {
-        "weight": 74.0,
-        "type": "env",
-        "description": "Buffer overflow in Linux kernel's NFS client.",
-        "affected_versions": [
-            "<6.7"
-        ]
-    },
-    "CVE-2023-5178": {
-        "weight": 69.0,
-        "type": "env",
-        "description": "Denial of service in Linux kernel's ext4 filesystem.",
-        "affected_versions": [
-            "<6.7.14"
-        ]
-    },
-    "CVE-2023-3227": {
-        "weight": 83.0,
-        "type": "env",
-        "description": "Information leak vulnerability in Linux kernel's perf subsystem.",
-        "affected_versions": [
-            "<6.7"
-        ]
-    },
-    "CVE-2023-1076": {
-        "weight": 65.0,
-        "type": "env",
-        "description": "Integer overflow vulnerability in Linux kernel's nf_tables.",
-        "affected_versions": [
-            "<6.2"
-        ]
-    },
-    "CVE-2022-41917": {
-        "weight": 86.0,
-        "type": "env",
-        "description": "Buffer overflow in Bash (command injection).",
-        "affected_versions": [
-            "<5.2"
-        ]
-    },
-    "CVE-2022-40982": {
-        "weight": 77.0,
-        "type": "env",
-        "description": "Linux kernel heap-based buffer overflow in the KSMBD module.",
-        "affected_versions": [
-            "<5.19"
-        ]
-    },
-    "CVE-2022-1677": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "Typo in Linux kernel command that could cause infinite loops.",
-        "affected_versions": [
-            "<=6.5.7"
-        ]
-    },
-    "CVE-2022-1016": {
-        "weight": 75.0,
-        "type": "env",
-        "description": "Privilege escalation vulnerability in Linux kernel's perf subsystem.",
-        "affected_versions": [
-            "<=5.16.9"
-        ]
-    },
-    "CVE-2021-3449": {
-        "weight": 73.0,
-        "type": "env",
-        "description": "Vulnerability in the Linux kernel's network subsystem.",
-        "affected_versions": [
-            "<=5.15"
-        ]
-    },
-    "CVE-2021-27645": {
-        "weight": 79.0,
-        "type": "env",
-        "description": "Privilege escalation in Linux kernel's netfilter/nf_tables.",
-        "affected_versions": [
-            "<=5.13"
-        ]
-    },
-    "CVE-2021-6950": {
-        "weight": 81.0,
-        "type": "env",
-        "description": "Information disclosure vulnerability in the Linux Kernel's memory-management subsystem.",
-        "affected_versions": [
-            "<=6.6.4"
-        ]
-    },
-    "CVE-2025-47219": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "Buffer overflow in Bash shell.",
-        "affected_versions": [
-            "<5.3"
-        ]
-    },
-    "CVE-2025-22945": {
-        "weight": 82.0,
-        "type": "env",
-        "description": "Vulnerability in the Linux kernel's netfilter component.",
-        "affected_versions": [
-            "<=6.7.5"
-        ]
-    },
-    "CVE-2025-8711": {
-        "weight": 77.0,
-        "type": "env",
-        "description": "Use-after-free vulnerability in the Linux kernel's sched/core component.",
-        "affected_versions": [
-            "<=6.11.5"
-        ]
-    },
-    "CVE-2025-32478": {
-        "weight": 80.0,
-        "type": "env",
-        "description": "Out-of-bounds read in Linux kernel's i8042 controller driver.",
-        "affected_versions": [
-            "<6.6"
-        ]
-    },
-    "CVE-2025-3644": {
-        "weight": 88.0,
-        "type": "env",
-        "description": "Information disclosure vulnerability in Linux kernel's fbdev subsystem.",
-        "affected_versions": [
-            "<6.1"
-        ]
-    },
-    "CVE-2025-3343": {
-        "weight": 75.0,
-        "type": "env",
-        "description": "Integer overflow in the Linux kernel's NFS client.",
-        "affected_versions": [
-            "<6.11"
-        ]
-    },
-    "CVE-2025-22944": {
-        "weight": 73.0,
-        "type": "env",
-        "description": "Integer overflow in the Linux kernel's bcache subsystem.",
-        "affected_versions": [
-            "<=6.11"
-        ]
-    },
-    "CVE-2024-2719": {
-        "weight": 81.0,
-        "type": "env",
-        "description": "Information leak in Linux kernel's sched/core component.",
-        "affected_versions": [
-            "<6.8"
-        ]
-    },
-    "CVE-2024-2688": {
-        "weight": 76.0,
-        "type": "env",
-        "description": "Vulnerability in the Linux kernel's io_uring subsystem.",
-        "affected_versions": [
-            "<6.10.4"
-        ]
-    },
-    "CVE-2024-2035": {
-        "weight": 79.0,
-        "type": "env",
-        "description": "Out-of-bounds write vulnerability in Linux kernel's NFS client.",
-        "affected_versions": [
-            "<6.5.8"
-        ]
-    },
-    "CVE-2024-32489": {
-        "weight": 84.0,
-        "type": "env",
-        "description": "Use-after-free vulnerability in the Linux kernel's binder.",
-        "affected_versions": [
-            "<6.10.11"
-        ]
-    },
-    "CVE-2024-4453": {
-        "weight": 72.0,
-        "type": "env",
-        "description": "Buffer overflow vulnerability in the Linux kernel's netfilter component.",
-        "affected_versions": [
-            "<6.9.4"
-        ]
-    },
-    "CVE-2023-6379": {
-        "weight": 68.0,
-        "type": "env",
-        "description": "Integer overflow in Linux kernel's fanotify subsystem.",
-        "affected_versions": [
-            "<6.6"
-        ]
-    },
-    "CVE-2022-47929": {
-        "weight": 85.0,
-        "type": "env",
-        "description": "Vulnerability in Apache httpd allowing directory traversal.",
-        "affected_versions": [
-            "<2.4.55"
-        ]
-    },
-    "CVE-2022-37454": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "Out-of-bounds read in Linux kernel's perf subsystem.",
-        "affected_versions": [
-            "<5.15"
-        ]
-    },
-    "CVE-2022-30387": {
+    "ERR_CLIENT_CERT_DISCLOSURE": {
         "weight": 73.0,
         "type": "env",
         "description": "Information disclosure in Linux kernel's cpuidle.",
         "affected_versions": [
             "<=5.19"
-        ]
+        ],
+        "descriptive_id": "ERR_CLIENT_CERT_DISCLOSURE",
+        "cve_ref": "CVE-2022-30387"
     },
-    "CVE-2022-29799": {
-        "weight": 81.0,
-        "type": "env",
-        "description": "Use-after-free vulnerability in the Linux kernel's mempolicy subsystem.",
-        "affected_versions": [
-            "<=6.1.10"
-        ]
-    },
-    "CVE-2022-22971": {
-        "weight": 74.0,
-        "type": "env",
-        "description": "Information leak vulnerability in Linux kernel's btrfs subsystem.",
-        "affected_versions": [
-            "<=5.16.5"
-        ]
-    },
-    "CVE-2021-46895": {
-        "weight": 70.0,
-        "type": "env",
-        "description": "Use-after-free vulnerability in the Linux kernel's fs/proc.",
-        "affected_versions": [
-            "<=5.16"
-        ]
-    },
-    "CVE-2021-43265": {
+    "ERR_BUFFER_OVERFLOW_LINUX": {
         "weight": 83.0,
         "type": "env",
         "description": "Buffer overflow vulnerability in the Linux kernel's nft_set_elem_expr.",
         "affected_versions": [
             "<5.15.1"
-        ]
+        ],
+        "descriptive_id": "ERR_BUFFER_OVERFLOW_LINUX",
+        "cve_ref": "CVE-2021-43265"
     },
-    "CVE-2021-4155": {
-        "weight": 78.0,
+    "ERR_DENIAL_SERVICE_LINUX": {
+        "weight": 69.0,
         "type": "env",
-        "description": "Vulnerability in the Linux kernel's btrfs filesystem.",
+        "description": "Denial of service in Linux kernel's ext4 filesystem.",
         "affected_versions": [
-            "<5.10.5"
-        ]
+            "<6.7.14"
+        ],
+        "descriptive_id": "ERR_DENIAL_SERVICE_LINUX",
+        "cve_ref": "CVE-2023-5178"
     },
-    "CVE-2021-20173": {
+    "ERR_INFORMATION_LEAK_LINUX": {
+        "weight": 74.0,
+        "type": "env",
+        "description": "Information leak vulnerability in Linux kernel's btrfs subsystem.",
+        "affected_versions": [
+            "<=5.16.5"
+        ],
+        "descriptive_id": "ERR_INFORMATION_LEAK_LINUX",
+        "cve_ref": "CVE-2022-22971"
+    },
+    "ERR_INTEGER_OVERFLOW_LINUX": {
+        "weight": 68.0,
+        "type": "env",
+        "description": "Integer overflow in Linux kernel's fanotify subsystem.",
+        "affected_versions": [
+            "<6.6"
+        ],
+        "descriptive_id": "ERR_INTEGER_OVERFLOW_LINUX",
+        "cve_ref": "CVE-2023-6379"
+    },
+    "ERR_BUFFER_OVERFLOW_BASH": {
+        "weight": 70.0,
+        "type": "env",
+        "description": "Buffer overflow in Bash shell.",
+        "affected_versions": [
+            "<5.3"
+        ],
+        "descriptive_id": "ERR_BUFFER_OVERFLOW_BASH",
+        "cve_ref": "CVE-2025-47219"
+    },
+    "ERR_LINUX_KERNEL_HEAP": {
+        "weight": 77.0,
+        "type": "env",
+        "description": "Linux kernel heap-based buffer overflow in the KSMBD module.",
+        "affected_versions": [
+            "<5.19"
+        ],
+        "descriptive_id": "ERR_LINUX_KERNEL_HEAP",
+        "cve_ref": "CVE-2022-40982"
+    },
+    "ERR_TYPO_LINUX_KERNEL": {
+        "weight": 70.0,
+        "type": "env",
+        "description": "Typo in Linux kernel command that could cause infinite loops.",
+        "affected_versions": [
+            "<=6.5.7"
+        ],
+        "descriptive_id": "ERR_TYPO_LINUX_KERNEL",
+        "cve_ref": "CVE-2022-1677"
+    },
+    "ERR_LINUX_KERNEL_NETWORK": {
+        "weight": 73.0,
+        "type": "env",
+        "description": "Vulnerability in the Linux kernel's network subsystem.",
+        "affected_versions": [
+            "<=5.15"
+        ],
+        "descriptive_id": "ERR_LINUX_KERNEL_NETWORK",
+        "cve_ref": "CVE-2021-3449"
+    },
+    "ERR_LINUX_KERNEL_NETFILTER": {
+        "weight": 82.0,
+        "type": "env",
+        "description": "Vulnerability in the Linux kernel's netfilter component.",
+        "affected_versions": [
+            "<=6.7.5"
+        ],
+        "descriptive_id": "ERR_LINUX_KERNEL_NETFILTER",
+        "cve_ref": "CVE-2025-22945"
+    },
+    "ERR_AFTER_FREE_LINUX": {
         "weight": 72.0,
         "type": "env",
         "description": "Use-after-free vulnerability in the Linux kernel's netfilter subsystem.",
         "affected_versions": [
             "<=5.12"
-        ]
+        ],
+        "descriptive_id": "ERR_AFTER_FREE_LINUX",
+        "cve_ref": "CVE-2021-20173"
     },
-    "CVE-2020-25707": {
-        "weight": 75.0,
+    "ERR_LINUX_KERNEL_SUBSYSTEM": {
+        "weight": 76.0,
         "type": "env",
-        "description": "Privilege escalation vulnerability in the Linux kernel's ftrace.",
+        "description": "Vulnerability in the Linux kernel's io_uring subsystem.",
         "affected_versions": [
-            "<=5.10"
-        ]
+            "<6.10.4"
+        ],
+        "descriptive_id": "ERR_LINUX_KERNEL_SUBSYSTEM",
+        "cve_ref": "CVE-2024-2688"
     },
-    "CVE-2020-14364": {
+    "ERR_APACHE_HTTPD_ALLOWING": {
+        "weight": 85.0,
+        "type": "env",
+        "description": "Vulnerability in Apache httpd allowing directory traversal.",
+        "affected_versions": [
+            "<2.4.55"
+        ],
+        "descriptive_id": "ERR_APACHE_HTTPD_ALLOWING",
+        "cve_ref": "CVE-2022-47929"
+    },
+    "ERR_LINUX_KERNEL_BTRFS": {
+        "weight": 78.0,
+        "type": "env",
+        "description": "Vulnerability in the Linux kernel's btrfs filesystem.",
+        "affected_versions": [
+            "<5.10.5"
+        ],
+        "descriptive_id": "ERR_LINUX_KERNEL_BTRFS",
+        "cve_ref": "CVE-2021-4155"
+    },
+    "ERR_MOBY_OPEN_SOURCE": {
+        "descriptive_id": "ERR_MOBY_OPEN_SOURCE",
+        "cve_ref": "CVE-2026-42306",
+        "weight": 31.0,
+        "type": "env",
+        "description": "CVE-2026-42306 - Moby is an open source container framework. In Docker Engine prior to version 29.5.1, Docker Daemon versions 28.5.2 and prior,\u2026",
+        "affected_versions": [
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2026-42306)"
+    },
+    "ERR_COMPOSE_TRUSTS_PATH": {
+        "descriptive_id": "ERR_COMPOSE_TRUSTS_PATH",
+        "cve_ref": "CVE-2025-62725",
         "weight": 70.0,
         "type": "env",
-        "description": "Out-of-bounds read in Linux kernel's nf_tables component.",
+        "description": "CVE-2025-62725 - Docker Compose trusts the path information embedded in remote OCI compose artifacts. When a layer includes the annotations\u2026",
         "affected_versions": [
-            "<=5.8.5"
-        ]
+            "<unknown>"
+        ],
+        "source": "Akaoma Exact Match (https://cve.akaoma.com/cve-2025-62725)"
     }
 }
