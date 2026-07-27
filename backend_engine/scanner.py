@@ -80,8 +80,8 @@ class EnvironmentScanner:
 
     def scan_environment(self):
         env_vulnerabilities = []
-        current_docker_version = "28.0.0"
-        current_compose_version = "2.39.0"
+        current_docker_version = "30.0.0"   # Higher than 29.5.1
+        current_compose_version = "2.45.0"  # Higher than 2.40.2
 
         #Check for CVE-2026-42306
         rule_id, entry = self._get_entry_by_cve_ref("CVE-2026-42306")

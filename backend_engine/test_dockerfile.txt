@@ -1,7 +1,47 @@
+# 1. VULNERABILITY: Unpinned tag + Outdated base image
 FROM ubuntu:latest
-WORKDIR /app
-COPY . .
+
+# 2. VULNERABILITY: Hardcoded secrets and credentials in ENV
+ENV AWS_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE"
+ENV AWS_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+ENV DB_PASSWORD="SuperSecretAdminPassword123!"
+ENV DEBIAN_FRONTEND="noninteractive"
+
+# 3. VULNERABILITY: Setting working directory directly to filesystem root
+WORKDIR /
+
+# 4. VULNERABILITY: Installing unnecessary administrative/insecure packages without cleaning package caches
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    netcat-openbsd \
+    telnet \
+    openssh-server \
+    sudo \
+    python2.7
+
+# 5. VULNERABILITY: Unencrypted HTTP fetch piped directly into bash
+RUN curl -sSL http://example.com/untrusted-installer.sh | bash
+
+# 6. VULNERABILITY: Fetching remote archive with ADD (vulnerable to Zip Slip / Remote Extraction)
+ADD http://example.com/untrusted_archive.tar.gz /tmp/
+
+# 7. VULNERABILITY: Wildcard permissions (777 - World Writable & Executable)
+RUN chmod -R 777 /tmp
+
+# 8. VULNERABILITY: Copying entire context into root directory without restraint
+COPY . /
+
+# 9. VULNERABILITY: Exposing sensitive administrative and database ports
+EXPOSE 22 23 3306 6379 27017
+
+# 10. VULNERABILITY: Mounting the host Docker socket (Allows full host takeover / Container Escape)
+VOLUME /var/run/docker.sock
+
+# 11. VULNERABILITY: Explicitly running as privileged ROOT user
 USER root
-EXPOSE 22
-RUN apt-get update
-CMD ["python3", "server.py"]
+
+# 12. VULNERABILITY: Missing HEALTHCHECK instruction
+
+# 13. VULNERABILITY: Running SSH daemon as container primary process
+CMD ["/usr/sbin/sshd", "-D"]

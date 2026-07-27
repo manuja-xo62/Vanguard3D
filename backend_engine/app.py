@@ -26,19 +26,29 @@ def scan_all():
     """Performs static IaC scanning + Environment CVE checks, returning unified ML Risk Score."""
     all_vulnerabilities = []
 
-    # 1. Scan static Dockerfile
+    #Scan static Dockerfile
     if os.path.exists(TARGET_FILE):
         file_scanner = DockerScanner(TARGET_FILE)
         file_issues = file_scanner.scan()
         if isinstance(file_issues, list):
             all_vulnerabilities.extend(file_issues)
 
-    # 2. Scan Host Environment for Engine CVEs
+    #Scan Host Environment for Engine CVEs
     env_scanner = EnvironmentScanner()
     env_issues = env_scanner.scan_environment()
     all_vulnerabilities.extend(env_issues)
 
-    # 3. Compute predictive risk percentage via Scikit-Learn Model
+    # zero gaurd
+    if not all_vulnerabilities:
+        return jsonify({
+            "status": "success", 
+            "target_file": TARGET_FILE,
+            "total_issues": 0,
+            "predicted_risk_score": 0.0,
+            "vulnerabilities": []
+        }), 200
+
+    #Compute predictive risk percentage via Scikit-Learn Model
     risk_score = predict_risk(all_vulnerabilities)
 
     payload = {
