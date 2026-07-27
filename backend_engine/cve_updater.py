@@ -1,104 +1,128 @@
 import json
+import urllib.request
 import re
-import requests
-import time
 import os
+import time
 
 DB_PATH = 'cve_database.json'
+INDEX_URL = "https://cve.akaoma.com/vendor/docker"
 
-def fetch_cve_metadata(cve_id):
+def fetch_exact_akaoma_data(cve_id):
     """
-    Queries the CIRCL Public CVE API to dynamically fetch real vulnerability data.
+    Directly scrapes the specific CVE page on Akaoma and extracts raw text data 
+    using the exact validated logic.
     """
-    # Normalize ID to standard hyphen format for the API
-    normalized_id = cve_id.replace('_', '-')
-    api_url = f"https://cve.circl.lu/api/cve/{normalized_id}"
+    url = f"https://cve.akaoma.com/{cve_id.lower()}"
+    print(f"[*] Targeting specific intelligence page: {url}")
     
-    print(f"[*] Fetching live metadata for {normalized_id}...")
-    try:
-        response = requests.get(api_url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data:
-                # 1. Fetch Real Description
-                description = data.get("summary", f"Vulnerability tracked under {normalized_id}.")
-                
-                # 2. Fetch CVSS Score & Calculate Weight (Scale 10.0 to 100.0)
-                cvss_score = data.get("cvss")
-                weight = float(cvss_score) * 10.0 if cvss_score else 70.0
-                
-                # 3. Extract Affected Versions (Parse from CPE strings)
-                affected_versions = []
-                cpes = data.get("vulnerable_configuration", [])
-                for cpe in cpes:
-                    parts = cpe.split(":")
-                    
-                    if len(parts) >= 6 and parts[5] != "*":
-                        affected_versions.append(f"<={parts[5]}")
-                
-                # Remove duplicates and limit to top 3 to keep DB clean
-                affected_versions = list(set(affected_versions))[:3]
-                if not affected_versions:
-                    affected_versions = ["<unknown>"]
-                    
-                return {
-                    "weight": round(weight, 1),
-                    "type": "env",  # Fixed to perfectly match your manual schema
-                    "description": description,
-                    "affected_versions": affected_versions,
-                    "source": "Akaoma / CIRCL Live Sync"
-                }
-    except Exception as e:
-        print(f"[!] Failed to fetch {normalized_id}: {e}")
-        
-    # Absolute fallback if API is unreachable
-    return {
-        "weight": 70.0,
-        "type": "env",
-        "description": f"Vulnerability tracked under {normalized_id}.",
-        "affected_versions": ["<unknown>"],
-        "source": "Akaoma Live Threat Feed"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0.0.0"
     }
+    
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as response:
+            html = response.read().decode('utf-8', errors='ignore')
+            
+        #Extract Exact CVSS Score
+        cvss_match = re.search(r'CVSS(?:[:\s]*)([0-9]{1,2}\.[0-9])', html, re.IGNORECASE)
+        cvss = float(cvss_match.group(1)) if cvss_match else 7.0 
+        weight = cvss * 10.0
+        
+        #Extract Exact Description Text
+        desc_match = re.search(r'<meta\s+name=["\']description["\']\s+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+        
+        if desc_match:
+            description = desc_match.group(1).strip()
+        else:
+            clean_text = re.sub(r'<[^>]+>', ' ', html)
+            clean_text = re.sub(r'\s+', ' ', clean_text)
+            fallback_match = re.search(rf'{cve_id}.*?(?:CVSS[:\s]*[0-9.]+)?\s*\)?\s*([A-Z].*?)(?=\s*All CVEs|\s*Top|\s*$)', clean_text, re.IGNORECASE)
+            description = fallback_match.group(1).strip() if fallback_match else f"Engine/Daemon vulnerability tracked under {cve_id}."
+            
+        #Extract Affected Versions
+        affected_versions = []
+        version_matches = re.findall(r'before\s+([0-9a-zA-Z.-]+)', description, re.IGNORECASE)
+        for v in version_matches:
+            affected_versions.append(f"<={v}")
+            
+        if not affected_versions:
+            affected_versions = ["<unknown>"]
+            
+        return {
+            "weight": round(weight, 1),
+            "type": "env",
+            "description": description,
+            "affected_versions": list(set(affected_versions)),
+            "source": f"Akaoma Exact Match ({url})"
+        }
+        
+    except Exception as e:
+        print(f"[!] Target extraction failed for {cve_id}: {e}")
+        return None
 
 def update_cve_database():
-    # Load existing DB
+    print("[*] Initializing Full-Scope Akaoma Synchronizer...")
+    
+    #Load Existing Database
     if os.path.exists(DB_PATH):
         with open(DB_PATH, 'r') as f:
-            cve_db = json.load(f)
+            try:
+                cve_db = json.load(f)
+            except json.JSONDecodeError:
+                cve_db = {}
     else:
         cve_db = {}
 
-    #Repair existing corrupted stubs
-    print("--- Checking for Legacy Stubs to Repair ---")
-    for cve_id, data in list(cve_db.items()):
-        # Identify stubs by the generic type or placeholder description
-        if data.get("type") == "env_cve" or "Engine/Daemon vulnerability" in data.get("description", ""):
-            print(f"[*] Repairing legacy stub: {cve_id}")
-            cve_db[cve_id] = fetch_cve_metadata(cve_id)
-            time.sleep(1)
-
-    # Scrape Akaoma for new IDs
-    print("\n--- Scraping Akaoma for New Threats ---")
+    #Scrape the Main Index for all CVE IDs
+    print(f"[*] Scanning main threat index: {INDEX_URL}")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0.0.0"
+    }
+    
     try:
-        # FIXED: Pointing back to the specific Docker threat feed
-        response = requests.get('https://cve.akaoma.com/vendor/docker', timeout=10)
-        html_text = response.text
-        # Regex extracts standard CVE IDs
-        cve_matches = re.findall(r'(CVE-\d{4}-\d{4,7})', html_text)
-        unique_cves = list(set(cve_matches))
+        req = urllib.request.Request(INDEX_URL, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as response:
+            index_html = response.read().decode('utf-8', errors='ignore')
+            
+        # Regex to find all standard CVE identifiers
+        cve_matches = re.findall(r'(CVE-\d{4}-\d{4,7})', index_html, re.IGNORECASE)
         
-        for cve_id in unique_cves:
-            if cve_id not in cve_db:
-                cve_db[cve_id] = fetch_cve_metadata(cve_id)
-                time.sleep(1)
+        # Remove duplicates by converting to a set, then back to a list
+        unique_cves = list(set([c.upper() for c in cve_matches]))
+        print(f"[+] Found {len(unique_cves)} total CVEs listed on Akaoma.")
+        
     except Exception as e:
-        print(f"[!] Akaoma sync failed: {e}")
+        print(f"[!] Failed to retrieve main index: {e}")
+        return
 
-    #Save the repaired and updated DB
-    with open(DB_PATH, 'w') as f:
-        json.dump(cve_db, f, indent=4)
+    #Cross-Reference and Fetch New Data
+    new_entries_count = 0
+    for cve_id in unique_cves:
+        formatted_id = cve_id.replace('-', '_')
         
-    print("\n[+] CVE Database successfully repaired and updated!")
+        #Only trigger a web request if the entry does NOT exist in our DB
+        if formatted_id not in cve_db:
+            exact_data = fetch_exact_akaoma_data(cve_id)
+            
+            if exact_data:
+                cve_db[formatted_id] = exact_data
+                new_entries_count += 1
+                print(f"[+] Successfully added new intelligence for {cve_id}")
+                
+                #Pause briefly to prevent the server from banning IP
+                time.sleep(1.5) 
+        else:
+            # Silently skip existing entries to save time and bandwidth
+            pass
+
+    #Save Updates to Disk
+    if new_entries_count > 0:
+        with open(DB_PATH, 'w') as f:
+            json.dump(cve_db, f, indent=4)
+        print(f"\n[+] Database synchronization complete! Added {new_entries_count} new entries. Total entries: {len(cve_db)}")
+    else:
+        print(f"\n[+] Database is already up to date. Total entries: {len(cve_db)}")
 
 if __name__ == "__main__":
     update_cve_database()
