@@ -7,13 +7,12 @@ from ml_engine import predict_risk
 from cve_updater import update_cve_database
 
 app = Flask(__name__)
-CORS(app)  # Enables cross-origin requests for Unreal Engine
+CORS(app)
 
 TARGET_FILE = 'test_dockerfile.txt'
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint for Unreal Engine connectivity verification."""
     return jsonify({
         "status": "online",
         "system": "VanguardNode 3D Core",
@@ -23,22 +22,21 @@ def health_check():
 
 @app.route('/api/scan', methods=['GET'])
 def scan_all():
-    """Performs static IaC scanning + Environment CVE checks, returning unified ML Risk Score."""
     all_vulnerabilities = []
 
-    #Scan static Dockerfile
+    #Scan Dockerfile
     if os.path.exists(TARGET_FILE):
         file_scanner = DockerScanner(TARGET_FILE)
         file_issues = file_scanner.scan()
         if isinstance(file_issues, list):
             all_vulnerabilities.extend(file_issues)
 
-    #Scan Host Environment for Engine CVEs
+    #Scan Host Environment
     env_scanner = EnvironmentScanner()
     env_issues = env_scanner.scan_environment()
     all_vulnerabilities.extend(env_issues)
 
-    # zero gaurd
+    # Zero Guard
     if not all_vulnerabilities:
         return jsonify({
             "status": "success", 
@@ -48,7 +46,7 @@ def scan_all():
             "vulnerabilities": []
         }), 200
 
-    #Compute predictive risk percentage via Scikit-Learn Model
+    #Compute predictive risk via ML Model
     risk_score = predict_risk(all_vulnerabilities)
 
     payload = {
@@ -63,7 +61,6 @@ def scan_all():
 
 @app.route('/api/remediate', methods=['POST'])
 def remediate():
-    """Patches a specific line in the target IaC file and returns updated state."""
     data = request.get_json()
     if not data or 'line' not in data or 'replacement' not in data:
         return jsonify({"error": "Payload must include 'line' and 'replacement'"}), 400
@@ -75,7 +72,6 @@ def remediate():
     success = file_scanner.remediate(line_num, replacement)
 
     if success:
-        # Re-scan to calculate newly mitigated risk score
         return scan_all()
     else:
         return jsonify({"error": f"Failed to patch line {line_num} in {TARGET_FILE}"}), 400
@@ -83,7 +79,6 @@ def remediate():
 
 @app.route('/api/sync-feed', methods=['POST'])
 def sync_feed():
-    """Triggers live threat scraping and automatic ML model retraining."""
     try:
         update_cve_database()
         return jsonify({
