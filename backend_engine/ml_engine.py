@@ -1,6 +1,6 @@
 import joblib
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import train_test_split
 import os
 import json
@@ -18,18 +18,24 @@ def train_model():
     df = pd.read_csv('dataset.csv')
     features = get_features()
     
-    #Ensure dataframe matches feature list
     available_features = [f for f in features if f in df.columns]
     x = df[available_features]
     y = df['Risk_Score']
 
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model = MLPRegressor(
+        hidden_layer_sizes=(64, 32),
+        activation='relu',
+        solver='adam',
+        max_iter=500,
+        random_state=42,
+        early_stopping=True
+    )
     model.fit(x_train, y_train)
 
     accuracy = model.score(x_test, y_test)
-    print(f'Dynamic Model Trained. Accuracy: {accuracy * 100:.2f}%')
+    print(f'Neural Network Model Trained. Accuracy: {accuracy * 100:.2f}%')
     joblib.dump(model, 'model.pkl')
 
 def predict_risk(vulnerabilities):

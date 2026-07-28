@@ -16,7 +16,7 @@ def get_rule_weight(data):
         elif sev == "LOW": return 2.0
     return 10.0
 
-def generate_dynamic_dataset(num_samples=5000):
+def generate_dynamic_dataset(num_samples=15000):
     if not os.path.exists('cve_database.json'):
         print("Error: cve_database.json missing.")
         return
@@ -29,10 +29,8 @@ def generate_dynamic_dataset(num_samples=5000):
     data = []
 
     for _ in range(num_samples):
-        active_count = random.choice([0, 0, 1, 1, 2, 2, 3, 4, 5, 7, 10, 12])
-        active_count = min(num_features, active_count)
-        
-        # Select specific random rules to activate for this sample
+        # Sample realistic active vulnerability counts
+        active_count = random.randint(0, min(15, num_features))
         active_indices = set(random.sample(range(num_features), active_count)) if active_count > 0 else set()
 
         sample_row = []
@@ -45,21 +43,19 @@ def generate_dynamic_dataset(num_samples=5000):
             if has_vuln:
                 total_risk += get_rule_weight(cve_db[feat])
 
-        #Compute smooth non-linear risk curve
+        # Smooth non-linear risk curve
         if total_risk == 0.0:
             final_score = 0.0
         else:
             scaled_score = 100.0 * (1.0 - math.exp(-total_risk / 35.0))
-            # Controlled micro-noise for model generalization
-            noise = random.uniform(-0.5, 0.5)
-            final_score = max(0.0, min(100.0, scaled_score + noise))
+            final_score = max(0.0, min(100.0, scaled_score))
 
         sample_row.append(round(final_score, 2))
         data.append(sample_row)
 
     df = pd.DataFrame(data, columns=features + ['Risk_Score'])
     df.to_csv('dataset.csv', index=False)
-    print(f"Dataset rebuilt with realistic feature density ({num_samples} samples x {num_features} features).")
+    print(f"Clean dataset generated ({num_samples} samples x {num_features} features).")
 
 if __name__ == '__main__':
     generate_dynamic_dataset()
