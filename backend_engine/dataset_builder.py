@@ -25,25 +25,33 @@ def generate_dynamic_dataset(num_samples=5000):
         cve_db = json.load(f)
 
     features = list(cve_db.keys())
+    num_features = len(features)
     data = []
 
     for _ in range(num_samples):
+        active_count = random.choice([0, 0, 1, 1, 2, 2, 3, 4, 5, 7, 10, 12])
+        active_count = min(num_features, active_count)
+        
+        # Select specific random rules to activate for this sample
+        active_indices = set(random.sample(range(num_features), active_count)) if active_count > 0 else set()
+
         sample_row = []
         total_risk = 0.0
 
-        for feat in features:
-            has_vuln = 1 if random.random() < 0.25 else 0
+        for idx, feat in enumerate(features):
+            has_vuln = 1 if idx in active_indices else 0
             sample_row.append(has_vuln)
 
             if has_vuln:
                 total_risk += get_rule_weight(cve_db[feat])
 
-        #Asymptotic smooth scaling
+        #Compute smooth non-linear risk curve
         if total_risk == 0.0:
             final_score = 0.0
         else:
-            scaled_score = 100.0 * (1.0 - math.exp(-total_risk / 40.0))
-            noise = random.uniform(-2.0, 2.0)
+            scaled_score = 100.0 * (1.0 - math.exp(-total_risk / 35.0))
+            # Controlled micro-noise for model generalization
+            noise = random.uniform(-0.5, 0.5)
             final_score = max(0.0, min(100.0, scaled_score + noise))
 
         sample_row.append(round(final_score, 2))
@@ -51,7 +59,7 @@ def generate_dynamic_dataset(num_samples=5000):
 
     df = pd.DataFrame(data, columns=features + ['Risk_Score'])
     df.to_csv('dataset.csv', index=False)
-    print(f"Dataset rebuilt with asymptotic curve scaling ({num_samples} samples x {len(features)} features).")
+    print(f"Dataset rebuilt with realistic feature density ({num_samples} samples x {num_features} features).")
 
 if __name__ == '__main__':
     generate_dynamic_dataset()
