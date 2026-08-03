@@ -3,6 +3,7 @@ import time
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from checkov_parser import run_checkhov_scan
 
 # Initialize the app
 app = FastAPI(
@@ -48,6 +49,11 @@ async def get_system_status():
         "vosk_stt": "INITIALIZING",
         "watchdog": "STANDBY"
     }
+@app.get("/api/scan")
+async def trigger_sast_scan():
+    """Trigger the AST subprocess parse on sandboxed IaC """
+    scan_results = run_checkhov_scan()
+    return scan_results
 
 if __name__ == "__main__":
     import uvicorn
