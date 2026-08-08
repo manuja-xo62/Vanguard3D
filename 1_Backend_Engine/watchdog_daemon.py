@@ -8,17 +8,28 @@ TARGET_DIR = os.path.abspath("target_iac_files")
 BACKUP_DIR = os.path.abspath(".vanguard_backup")
 
 class VanguardRemediationHandler(FileSystemEventHandler):
+    def __init__(self):
+        super().__init__()
+        # Tracks files modified by this script to prevent feedback loops
+        self._self_modified_files = set()
+
     def on_modified(self, event):
         if event.is_directory:
             return
         
-        file_path = event.src_path
+        file_path = os.path.abspath(event.src_path)
         filename = os.path.basename(file_path)
         
         # Skip patch files or backups
         if filename.endswith(".patch") or ".vanguard_backup" in file_path:
             return
+
+        # Suppress event if it was triggered by our OWN script write
+        if file_path in self._self_modified_files:
+            self._self_modified_files.remove(file_path)
+            return
             
+        print(f"\n[WATCHDOG] User modification detected in: {filename}")
         self.apply_zero_trust_patch(file_path, filename)
 
     def apply_zero_trust_patch(self, original_path, filename):
@@ -26,24 +37,22 @@ class VanguardRemediationHandler(FileSystemEventHandler):
             os.makedirs(BACKUP_DIR, exist_ok=True)
             
         try:
-            # Read existing file content first
+            # Read existing content
             with open(original_path, 'r') as f:
                 content = f.readlines()
-                
-            # gaurd logifc : Stop the loop if the file is already patched!
-            if content and "# VANGUARDNODE AUTOPATCH" in content[0]:
-                return
 
-            print(f"\n[WATCHDOG] Unverified modification detected in: {filename}")
-            
-            #Create Zero-Trust Backup
+            # Create Zero-Trust Backup
             backup_path = os.path.join(BACKUP_DIR, f"{filename}.bak_{int(time.time())}")
             shutil.copy2(original_path, backup_path)
             print(f"[REMEDIATION] Secure backup created at: {backup_path}")
             
             #Apply Patch
             patched_content = [line for line in content]
-            patched_content.insert(0, "# VANGUARDNODE AUTOPATCH: Security constraints verified.\n")
+            if not (patched_content and "# VANGUARDNODE AUTOPATCH" in patched_content[0]):
+                patched_content.insert(0, "# VANGUARDNODE AUTOPATCH: Security constraints verified.\n")
+            
+            # Register file path BEFORE writing so on_modified knows to ignore this write
+            self._self_modified_files.add(original_path)
             
             with open(original_path, 'w') as f:
                 f.writelines(patched_content)
@@ -52,6 +61,8 @@ class VanguardRemediationHandler(FileSystemEventHandler):
             
         except Exception as e:
             print(f"[ERROR] Remediation failed for {filename}: {str(e)}")
+            if original_path in self._self_modified_files:
+                self._self_modified_files.remove(original_path)
 
 def start_watchdog():
     if not os.path.exists(TARGET_DIR):
