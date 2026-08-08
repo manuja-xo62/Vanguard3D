@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from checkov_parser import run_checkhov_scan
+from ml_engine import predict_global_risk
 
 # Initialize the app
 app = FastAPI(
@@ -54,6 +55,14 @@ async def trigger_sast_scan():
     """Trigger the AST subprocess parse on sandboxed IaC """
     scan_results = run_checkhov_scan()
     return scan_results
+
+@app.get("/api/risk-assessment")
+async def get_risk_assessment():
+    #Executing the chechov parser script and runs the ML model to compute global risk score
+    scan_data = run_checkhov_scan()
+    if scan_data.get("status") == "SUCCESS":
+        risk_metrices = predict_global_risk(scan_data.get("findings", {}))
+        return risk_metrices
 
 if __name__ == "__main__":
     import uvicorn
