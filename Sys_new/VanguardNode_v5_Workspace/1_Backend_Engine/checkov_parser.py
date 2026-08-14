@@ -92,4 +92,16 @@ def parse_checkhov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[s
                 parsed_findings.append(parse_checkhov_finding(check, str(target_path)))
 
         return parsed_findings
+
+    if __name__ == "__main__":
+        import sys
+        #quick cli self test execution
+        test_dir = "../sample_repo" if len(sys.argv) < 2 else sys.argv[1]
+        print(f"---Testing Checkhov Parser against '{test_dir}")
+        try:
+            findings = run_checkhov_scan(test_dir)
+            print(f"Successfully extracted {len(findings)} findings : \n")
+            print(json.dumps(findings, indent=2))
+        except Exception as e:
+            print(f"Error during Checkhov scan : {e}")
         
