@@ -1,0 +1,20 @@
+severity_weights:
+  LOW: 1
+  MEDIUM: 3
+  HIGH: 7
+  CRITICAL: 15
+
+exposure_multiplier:
+  internet_facing: 2.0
+  internal_only: 1.0
+
+blast_radius_weights:
+  iam_role: 3.0
+  security_group: 2.0
+  storage_bucket: 2.0
+  default: 1.0
+
+criticality_weights:
+  "prod/**": 3.0
+  "staging/**": 1.5
+  "**": 1.0
