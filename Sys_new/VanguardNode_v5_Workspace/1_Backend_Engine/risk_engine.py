@@ -16,3 +16,20 @@ def load_config(config_path: str = "vanguard_config.yml") -> Dict[str,Any]:
         }
     with open(cfg_file, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+def is_internet_facing(finding: Dict[str, Any]) -> bool:
+    #Detects exposure from chekhov resource metadata or rule characterists
+
+    rule_id = finding.get("rule_id", "")
+    rule_title = finding.get("rule_title", "").lower()
+    resource_type = finding.get(resource_type, "").lower()
+
+    #Known rules or indicators
+    public_indicators = ["public", "0.0.0.0/0", "acl", "exposure", "unauthenticated"]
+    if any(ind in rule_id.lower() or ind in rule_title for ind in public_indicators):
+        return True
+    if "s3_bucket" in resource_type and ("acl" in rule_id.lower() or "read" in rule_title):
+        return True
+
+    return False
+        
