@@ -32,3 +32,64 @@ def parse_checkhov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[s
         "code_block": raw_check.get("code_block", []),
         "status": "open"
     }
+
+    def run_checkhov_scan(target_dir: str) -> dict[str, Any]:
+        #Executing the checkhov CLI against the target location and return structured fundings that suits app's requirements
+
+        target_path = Path(target_dir).resolve()
+        if not target_path.exists():
+            raise FileNotFoundError(f"Target location does not exist : {target_dir}")
+        
+        #Run Chekckhob as a subprocess requesting a JSON format output with the findings
+        cmd = [
+            "checkhov",
+            "-d", str(target_path),
+            "-o", "json",
+            "--quiet"
+        ]
+
+        try:
+            #chekhov return an exit code 1 or 2 when findings are found
+            #Cpaturing stdout /stderr without throwing a subprocess/calledprocesserror
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=False
+            )
+        except FileNotFoundError:
+            raise RuntimeError("Checkhov is not installed or not available in PATH")
+        
+        raw_output = result.stdout.strip()
+        if not raw_output:
+            #if the output is empty check if stderr contains vital errors
+            if result.stderr:
+                print(f"[Checkhov Parser Warning] Stderr output: {result.stderr}")
+            return[] 
+        
+        try:
+            data = json.loads(raw_output)
+        except json.JSONDecodeError:
+            print("[Checkhob Parser Error] Failed to parse JSON output from Chekhov.")
+            return[]
+
+        parsed_findings = []
+        
+        #Chekhov returning a list (when multiple files are scanned, terraform + Docker)
+        if isinstance(data,list):
+            for framework_results in data:
+                results_obj = framework_results.get("results", {})
+                failed_checks = results_obj.get("failed_checks", [])
+                for check in failed_checks:
+                    parsed_findings.append(parse_checkhov_finding(check, str(target_path)))
+
+        #checkhov returning a dictionary (single file scan)
+        elif isinstance(data, dict):
+            results_obj = data.get("results", {})
+            failed_checks = results_obj.get("failed_checks", [])
+            for check in failed_checks:
+                parsed_findings.append(parse_checkhov_finding(check, str(target_path)))
+
+        return parsed_findings
+        
