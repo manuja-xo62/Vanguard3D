@@ -32,4 +32,16 @@ def is_internet_facing(finding: Dict[str, Any]) -> bool:
         return True
 
     return False
-        
+
+def get_file_criticality(file_path: str, criticality_weights: Dict[str,float]) -> float:
+    #matching file path to the wildcard patterns in crticality weights
+
+    #nnormalizing path seperators
+    normalized_path = file_path.replace("\\", "/"). lstrip("/")
+
+    for pattern, weight in criticality_weights.items():
+        if fnmatch.fnmatch(normalized_path, pattern) or fnmatch.fnmatch(Path(normalized_path).name, pattern):
+            return weight
+        return criticality_weights.get("**", 1.0)
+
+
