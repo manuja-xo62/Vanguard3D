@@ -18,3 +18,12 @@ REMEDIATION_TEMPLATES = {
 }
 
 #extra rules will be added later
+def create_backup(file_path: Path) -> Path:
+    #creates a backup of the target file first. It needs to succeed before any patch is applied.
+    backup_path = file_path.with_name(file_path.name + ".vanguard_backup")
+    try:
+        shutil.copy2(file_path, backup_path)
+        return backup_path
+    except Exception as e:
+        #abort entirely if this copy fails
+        raise RuntimeError(f"FATAL: Backup creation failed for {file_path}. Aborting patch. Error: {e}")
