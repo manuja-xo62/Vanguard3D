@@ -93,4 +93,28 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
     #return success
     return True, str(backup_path)
 
+if __name__ == "__main__":
+    import sys
+
+    #simple test using the sample files
+    test_dir = "../sample_repo" if len(sys.argv) <2 else sys.argv[1]
+    print("--- Testing Zero Trist Patch Service---")
+
+    #simulating a payload from the UE4 endpoint
+    demo_playload = [
+        {"file": "main.tf", "rule": "CKV_AWS_20", "lines": [1, 3]},
+        {"file": "Dockerfile", "rule": "CKV_DOCKER_3", "lines": [1, 4]}
+    ]
+
+    for payload in demo_playload:
+        print(f"\nAttempting to patch {payload['rule']} in {payload['file']}...")
+        success, msg = apply_patch(test_dir, payload["file"], payload["rule"], payload["lines"])
+        if success:
+            print(f"[SUCCESS] File patched. Backup Secured at: {msg}")
+        else:
+            print(f"[FAILED] {msg}")
+
+    
+    
+
 
