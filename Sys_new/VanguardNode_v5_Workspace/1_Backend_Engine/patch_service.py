@@ -27,3 +27,70 @@ def create_backup(file_path: Path) -> Path:
     except Exception as e:
         #abort entirely if this copy fails
         raise RuntimeError(f"FATAL: Backup creation failed for {file_path}. Aborting patch. Error: {e}")
+
+def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: list) -> Tuple[bool,str]:
+    #Executing the zero trust patching process
+
+    #resolve full paths
+    target_path = Path(target_dir).resolve()
+    file_path = (target_path / file_path_rel.lstrip("\\/")).resolve()
+
+    #safety check
+    if not file_path.exists():
+        return False, f"Target file not found: {file_path}"
+    
+    if rule_id not in REMEDIATION_TEMPLATES:
+        return False, f"No nano-patch template available for rule: {rule_id}"
+    
+    #creat the zero-trust backup
+    try:
+        backup_path = create_backup(file_path)
+    except RuntimeError as e:
+        return False, str(e)
+    
+    #Read the file and locate the exact lines using AST data
+    with open(file_path, 'r', encoding="utf-8") as f:
+        lines = f.readlines()
+
+    start_line_idx = max(0, line_range[0] - 1)
+    end_line_idx = min(len(lines), line_range[1])
+
+    #Read the patching logic
+    template = REMEDIATION_TEMPLATES[rule_id]
+    patch_applied = False
+
+    #Apply the CIS-Compliant rewrite
+    if "target_text" in template:
+        #direct string replacement within the specific block of text
+        for i in range(start_line_idx, end_line_idx):
+            if template["target_text"] in lines[i]:
+                lines[i] = lines[i].replace(template["target_text"]. template["patch_text"])
+                patch_applied = True
+                break
+    #for dockerfiles or HCL
+    elif template.get("action") == "insert_before_last":
+        #for docker files : inject the USER directive before the CMD line
+        for i in range(start_line_idx, end_line_idx):
+            if lines[i].strip().upper().startswith("CMD"):
+                lines.insert(i,template["patch_text"])
+                patch_applied = True
+                break
+    
+    #Write the file back
+    if patch_applied:
+        shutil.copy2(backup_path,file_path)
+        return False, "Failed to locate mutable target line within the AST range"
+    
+    #save the file
+    try:
+        with open(file_path, 'w', encoding="utf-8") as f:
+            f.writelines(lines)
+    except Exception as e:
+        #failsafe rollback
+        shutil.copy2(backup_path, file_path)
+        return False, f"Failed to save patched file. Rolled back to backup. Error {e}"
+    
+    #return success
+    return True, str(backup_path)
+
+
