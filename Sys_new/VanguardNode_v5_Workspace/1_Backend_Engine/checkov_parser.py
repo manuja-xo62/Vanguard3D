@@ -8,8 +8,7 @@ from typing import Dict, List, Any
 
 
 def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[str, Any]:
-   #normalizing single chekhov findings into the app's standard data structure
-
+    ##Normalizes single Checkov findings into the app's standard data structure
     file_abs = raw_check.get("file_path", "")
     try:
         rel_path = str(Path(file_abs).relative_to(Path(target_dir).resolve()))
@@ -32,19 +31,22 @@ def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[st
     }
 
 
-def run_checkov_scan(target_dir: str) -> List[Dict[str, Any]]:
-    #Executing the checkhov CLI against the target location and return structured fundings that suits app's requirements
+def run_checkov_scan(target_dir: str) -> List:
+    ##Executes Checkov CLI against the target directory and returns structured findings
     target_path = Path(target_dir).resolve()
+    
     if not target_path.exists():
         raise FileNotFoundError(f"Target directory does not exist: {target_dir}")
+
+    target_path_str = str(target_path)
 
     # Dynamically resolve checkov path or fall back to module execution
     checkov_bin = shutil.which("checkov")
     if checkov_bin:
-        cmd = [checkov_bin, "-d", str(target_path), "-o", "json", "--quiet"]
+        cmd = [checkov_bin, "-d", target_path_str, "-o", "json", "--quiet"]
     else:
         # Fallback: Run via active python interpreter module
-        cmd = [sys.executable, "-m", "checkov.main", "-d", str(target_path), "-o", "json", "--quiet"]
+        cmd = [sys.executable, "-m", "checkov.main", "-d", target_path_str, "-o", "json", "--quiet"]
 
     try:
         result = subprocess.run(
@@ -77,14 +79,14 @@ def run_checkov_scan(target_dir: str) -> List[Dict[str, Any]]:
             results_obj = framework_results.get("results", {})
             failed_checks = results_obj.get("failed_checks", [])
             for check in failed_checks:
-                parsed_findings.append(parse_checkov_finding(check, str(target_path)))
+                parsed_findings.append(parse_checkov_finding(check, target_path_str))
 
-    #Checkov returned a single dict (single framework)
+    # Checkov returned a single dict (single framework)
     elif isinstance(data, dict):
         results_obj = data.get("results", {})
         failed_checks = results_obj.get("failed_checks", [])
         for check in failed_checks:
-            parsed_findings.append(parse_checkov_finding(check, str(target_path)))
+            parsed_findings.append(parse_checkov_finding(check, target_path_str))
 
     return parsed_findings
 

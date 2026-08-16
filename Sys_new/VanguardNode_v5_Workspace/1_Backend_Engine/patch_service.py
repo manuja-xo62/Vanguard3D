@@ -6,7 +6,7 @@ from typing import Dict, Any, Tuple
 
 
 def is_docker_user_patched(content: str) -> bool:
-    """Checks if a non-comment USER instruction or patch tag is present."""
+    ##Checks if a non-comment USER instruction or patch tag is present.
     if "VANGUARD NANO-PATCH APPLIED" in content:
         return True
     for line in content.splitlines():
@@ -18,10 +18,10 @@ def is_docker_user_patched(content: str) -> bool:
 
 
 def is_s3_acl_patched(content: str) -> bool:
-    """Checks if S3 ACL is set to private or patch tag is present."""
-    if "VANGUARD NANO-PATCH APPLIED" in content:
-        return True
-    return bool(re.search(r'acl\s*=\s*"private"', content))
+    ##Returns True only if ACL is set to private and no public-read remains.
+    has_private = bool(re.search(r'acl\s*=\s*"private"', content))
+    has_public = bool(re.search(r'acl\s*=\s*"public-read"', content))
+    return has_private and not has_public
 
 
 # CIS-compliant remediation templates
