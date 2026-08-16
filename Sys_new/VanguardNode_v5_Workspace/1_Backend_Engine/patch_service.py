@@ -8,38 +8,45 @@ from typing import Dict, Any, Tuple
 REMEDIATION_TEMPLATES = {
     "CKV_AWS_20": {
         "search_pattern": r'acl\s*=\s*"public-read"',
-        "patch_text": 'acl    = "private" # [VANGUARD NANO-PATCH APPLIED]'
+        "patch_text": 'acl    = "private" # [VANGUARD NANO-PATCH APPLIED]',
+        "check_already_patched": lambda content: "VANGUARD NANO-PATCH APPLIED" in content or 'acl    = "private"' in content
     },
     "CKV_DOCKER_3": {
         "action": "insert_user",
-        "patch_text": "USER vanguard_svc # [VANGUARD NANO-PATCH APPLIED]\n"
+        "patch_text": "USER vanguard_svc # [VANGUARD NANO-PATCH APPLIED]\n",
+        "check_already_patched": lambda content: "USER " in content.upper() or "VANGUARD NANO-PATCH APPLIED" in content
     }
 }
-#extra rules will be added later
 
 def create_backup(file_path: Path) -> Path:
-   #creates a backup of the target file first. It needs to succeed before any patch is applied.
+    ##Creates a zero-trust backup of the target file before mutation.
     backup_path = file_path.with_name(file_path.name + ".vanguard_backup")
     try:
         shutil.copy2(file_path, backup_path)
         return backup_path
     except Exception as e:
-        #abort entirely if this copy fails
         raise RuntimeError(f"FATAL: Backup creation failed for {file_path}. Aborting patch. Error: {e}")
 
 def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: list) -> Tuple[bool, str]:
-    #Executing the zero trust patching process
+    #Executes the strict zero-trust patching sequence with Idempotency checks.
 
-    #resolve full path
     target_path = Path(target_dir).resolve()
     file_path = (target_path / file_path_rel.lstrip("\\/")).resolve()
 
-     #safety check
     if not file_path.exists():
         return False, f"File not found: {file_path}"
 
     if rule_id not in REMEDIATION_TEMPLATES:
         return False, f"No nano-patch template available for rule: {rule_id}"
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        file_content = f.read()
+
+    template = REMEDIATION_TEMPLATES[rule_id]
+
+    # check If file is already patched or compliant, terminate safely.
+    if template.get("check_already_patched") and template["check_already_patched"](file_content):
+        return True, f"File {file_path_rel} is already compliant. No patch required."
 
     # Zero-trust backup creation
     try:
@@ -47,13 +54,10 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
     except RuntimeError as e:
         return False, str(e)
 
-    with open(file_path, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-
+    lines = file_content.splitlines(keepends=True)
     start_line_idx = max(0, line_range[0] - 1)
     end_line_idx = min(len(lines), line_range[1])
 
-    template = REMEDIATION_TEMPLATES[rule_id]
     patch_applied = False
 
     # Apply AST-targeted modification
@@ -79,10 +83,11 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
             patch_applied = True
 
     if not patch_applied:
-        shutil.copy2(backup_path, file_path)
+        if backup_path.exists():
+            os.remove(backup_path) # Clean up redundant backup
         return False, "Failed to locate mutable target line within AST range."
 
-    # Write back modified lines
+    #Write back modified lines
     try:
         with open(file_path, 'w', encoding='utf-8') as f:
             f.writelines(lines)
@@ -97,18 +102,17 @@ if __name__ == "__main__":
     import sys
     
     test_dir = "../sample_repo" if len(sys.argv) < 2 else sys.argv[1]
-    print("--- Testing Zero-Trust Patch Service ---")
+    print("--- Testing Idempotent Zero-Trust Patch Service ---")
     
-    # Correct line range covering the whole Terraform
     demo_payloads = [
         {"file": "main.tf", "rule": "CKV_AWS_20", "lines": [1, 8]},
-        {"file": "Dockerfile", "rule": "CKV_DOCKER_3", "lines": [1, 5]}
+        {"file": "Dockerfile", "rule": "CKV_DOCKER_3", "lines": [1, 6]}
     ]
     
     for payload in demo_payloads:
         print(f"\nAttempting to patch {payload['rule']} in {payload['file']}...")
         success, msg = apply_patch(test_dir, payload["file"], payload["rule"], payload["lines"])
         if success:
-            print(f"[SUCCESS] File patched. Backup Secured at: {msg}")
+            print(f"[STATUS] {msg}")
         else:
             print(f"[FAILED] {msg}")
