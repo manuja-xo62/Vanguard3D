@@ -102,3 +102,14 @@ def record_patch_event(finding_id: str, backup_path: str) -> str:
     conn.close()
     return event_id
 
+def get_scan_history() -> List[Dict[str,Any]]:
+    #retrieves the past scans for replay mode
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT scan_id, source, target_path, r_global, timestamp FROM scans ORDER BY timestamp DESC")
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
