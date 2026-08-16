@@ -84,5 +84,21 @@ def record_scan(scan_id: str, source: str, target_path: str, r_global: float, fi
             )
     conn.commit()
     conn.close()
+
+def record_patch_event(finding_id: str, backup_path: str) -> str:
+    ##Logs the patch evets and updates the successful records status into patched
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    new_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    event_id = f"evnt_{uuid.uuid4().hex[:8]}"
+
+    #updating status
+    cursor.execute(
+        "UPDATE findings SET status = 'patched' WHERE finding_id = ?",
+        (finding_id,))    
     
-    
+    conn.commit()
+    conn.close()
+    return event_id
+
