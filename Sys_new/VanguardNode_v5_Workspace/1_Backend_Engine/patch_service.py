@@ -4,19 +4,42 @@ import re
 from pathlib import Path
 from typing import Dict, Any, Tuple
 
+
+def is_docker_user_patched(content: str) -> bool:
+    """Checks if a non-comment USER instruction or patch tag is present."""
+    if "VANGUARD NANO-PATCH APPLIED" in content:
+        return True
+    for line in content.splitlines():
+        stripped = line.strip()
+        # Ignore Dockerfile comments (#) and check for actual USER instruction
+        if not stripped.startswith("#") and stripped.upper().startswith("USER "):
+            return True
+    return False
+
+
+def is_s3_acl_patched(content: str) -> bool:
+    """Checks if S3 ACL is set to private or patch tag is present."""
+    if "VANGUARD NANO-PATCH APPLIED" in content:
+        return True
+    return bool(re.search(r'acl\s*=\s*"private"', content))
+
+
 # CIS-compliant remediation templates
 REMEDIATION_TEMPLATES = {
     "CKV_AWS_20": {
         "search_pattern": r'acl\s*=\s*"public-read"',
         "patch_text": 'acl    = "private" # [VANGUARD NANO-PATCH APPLIED]',
-        "check_already_patched": lambda content: "VANGUARD NANO-PATCH APPLIED" in content or 'acl    = "private"' in content
+        "check_already_patched": is_s3_acl_patched
     },
     "CKV_DOCKER_3": {
         "action": "insert_user",
         "patch_text": "USER vanguard_svc # [VANGUARD NANO-PATCH APPLIED]\n",
-        "check_already_patched": lambda content: "USER " in content.upper() or "VANGUARD NANO-PATCH APPLIED" in content
+        "check_already_patched": is_docker_user_patched
     }
 }
+
+#More rules will be added later
+
 
 def create_backup(file_path: Path) -> Path:
     ##Creates a zero-trust backup of the target file before mutation.
@@ -27,9 +50,9 @@ def create_backup(file_path: Path) -> Path:
     except Exception as e:
         raise RuntimeError(f"FATAL: Backup creation failed for {file_path}. Aborting patch. Error: {e}")
 
-def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: list) -> Tuple[bool, str]:
-    #Executes the strict zero-trust patching sequence with Idempotency checks.
 
+def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: list) -> Tuple[bool, str]:
+   ##Executes the zero-trust patching sequence with comment-aware safeguards.
     target_path = Path(target_dir).resolve()
     file_path = (target_path / file_path_rel.lstrip("\\/")).resolve()
 
@@ -44,11 +67,11 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
 
     template = REMEDIATION_TEMPLATES[rule_id]
 
-    # check If file is already patched or compliant, terminate safely.
+    #Check idempotency using comment-aware logic
     if template.get("check_already_patched") and template["check_already_patched"](file_content):
         return True, f"File {file_path_rel} is already compliant. No patch required."
 
-    # Zero-trust backup creation
+    #Zero-trust backup creation
     try:
         backup_path = create_backup(file_path)
     except RuntimeError as e:
@@ -60,7 +83,7 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
 
     patch_applied = False
 
-    # Apply AST-targeted modification
+    #Apply AST-targeted modification
     if "search_pattern" in template:
         pattern = re.compile(template["search_pattern"])
         for i in range(start_line_idx, end_line_idx):
@@ -84,10 +107,10 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
 
     if not patch_applied:
         if backup_path.exists():
-            os.remove(backup_path) # Clean up redundant backup
+            os.remove(backup_path)
         return False, "Failed to locate mutable target line within AST range."
 
-    #Write back modified lines
+    # Write back modified lines
     try:
         with open(file_path, 'w', encoding='utf-8') as f:
             f.writelines(lines)
