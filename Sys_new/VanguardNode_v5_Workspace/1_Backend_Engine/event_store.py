@@ -113,3 +113,29 @@ def get_scan_history() -> List[Dict[str,Any]]:
     conn.close()
 
     return [dict(row) for row in rows]
+
+if __name__ == "__main__":
+    print("-- Testing SQLite Event Store---")
+    init_db()
+    print("Database `vanguard.db` initialized successfully.")
+
+    #simulating saving a scan from risk engine
+    test_scan_id = f"scan_{uuid.uuid4().hex[:9]}"
+    sample_files = [{
+        "file_path": "main.tf",
+        "R_file": 14.0,
+        "findings": [{
+            "finding_id": "fnd_test123",
+            "file_path": "main.tf",
+            "rule_id": "CKV_AWS_20",
+            "severity": "HIGH",
+            "resource_type": "aws_s3_bucket",
+            "status": "open"
+        }]
+    }]
+
+    record_scan(test_scan_id, "api", "../sample_repo", 14.0, sample_files)
+    print(f"Recorded Scan: {test_scan_id}")
+    
+    history = get_scan_history()
+    print(f"Total stored scans: {len(history)}")
