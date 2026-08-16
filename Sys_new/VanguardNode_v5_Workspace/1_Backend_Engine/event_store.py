@@ -49,4 +49,40 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+def record_scan(scan_id: str, source: str, target_path: str, r_global: float, files_data: List[Dict[str, Any]]):
+    #logs new scans and the findings to databases
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    cursor.execute(
+        "INSERT INTO scans (scan_id, source, target_path, r_global, timestamp) VALUES (?, ?, ?, ?, ?)",
+        (scan_id, source, target_path, r_global, now_iso)
+    )
+
+    for file_entry in files_data:
+        r_file = file_entry.get("R_file", 0.0)
+        for f in file_entry.get("findings", []):
+            cursor.execute(
+                """
+                INSERT INTO findings 
+                (finding_id, scan_id, file_path, rule_id, severity, resource_type, r_file, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    f.get("finding_id", f"fnd_{uuid.uuid4().hex[:8]}"),
+                    scan_id,
+                    f.get("file_path", ""),
+                    f.get("rule_id", ""),
+                    f.get("severity", "MEDIUM"),
+                    f.get("resource_type", "default"),
+                    r_file,
+                    f.get("status", "open")
+                )
+            )
+    conn.commit()
+    conn.close()
+    
     
