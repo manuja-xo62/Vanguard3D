@@ -70,6 +70,8 @@ def get_history():
     ##retreive the scan history for replay mode
     return{"status": "success", "history": get_scan_history()}
 
-
+if __name__ == "__main__":
+    print("--- Starting Vanguard API on Port 8000---")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
