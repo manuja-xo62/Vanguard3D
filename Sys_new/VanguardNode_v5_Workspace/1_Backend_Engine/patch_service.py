@@ -120,6 +120,33 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
 
     return True, str(backup_path)
 
+def execute_rollback(target_dir: str, file_path_rel: str) -> dict:
+    ##Restores the orginal file from the backup
+    base_dir = Path(target_dir).resolve()
+    active_file = base_dir / file_path_rel
+    backup_file = base_dir / f"{file_path_rel}.vanguard_backup"
+
+    if not backup_file.exists():
+        return {
+            "Status": "Failed",
+             "message": f"No backup found for {file_path_rel}"
+             }
+    try:
+        #overwrite the active patched file
+        shutil.copy2(backup_file, active_file)
+
+        return{
+            "status": "success",
+            "message": f"Successfully rolled back {file_path_rel} to its original state"
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Rollback operation failed: {str(e)}"
+        }
+
+
 
 if __name__ == "__main__":
     import sys
