@@ -64,3 +64,18 @@ def main():
     scan_parser = subparsers.add_parser("scan", help="Run a full scan on a target directory")
     scan_parser.add_argument("path", help="Target directory to scan")
     scan_parser.add_argument("--json", action="store_true", help="Output machine-readable JSON for CI integration")
+
+    # comment-pr command
+    pr_parser = subparsers.add_parser("comment-pr", help="Post findings as a GitHub PR comment")
+    pr_parser.add_argument("--results", required=True, help="Path to the JSON results file from a previous scan")
+
+    args = parser.parse_args()
+    
+    if args.command == "scan":
+        run_scan(args.path, args.json)
+    elif args.command == "comment-pr":
+        print("GitHub PR Integration Module coming soon...")
+
+
+if __name__ == "__main__":
+    main()
