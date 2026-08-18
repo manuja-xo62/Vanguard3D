@@ -8,12 +8,17 @@ from checkov_parser import run_checkov_scan
 from risk_engine import calculate_risk
 from patch_service import apply_patch
 from event_store import record_scan, record_patch_event, get_scan_history, init_db
+from patch_service import execute_rollback
 
 app = FastAPI(title = "VanguardNode API", version = "5.0", description="Zero Trust Backend Engine")
 
 #pydantic models for input validation
 class ScanRequest(BaseModel):
     target_directory: str = "../sample_repo"
+
+class RollbackRequest(BaseModel):
+    target_directory: str
+    file_path_rel: str
 
 class PatchRequest(BaseModel):
     file_path_rel: str
@@ -69,6 +74,20 @@ def trigger_patch(req: PatchRequest):
 def get_history():
     ##retreive the scan history for replay mode
     return{"status": "success", "history": get_scan_history()}
+
+@app.post("/rollback")
+def rollback_patch(req: RollbackRequest):
+    ##rollback the previous patch
+
+    result = execute_rollback(req.target_directory, req.file_path_rel)
+
+    if result["status"] == "failed":
+        raise HTTPException(status_code=404, detail=result["message"])
+    elif result["status"] == "error":
+        raise HTTPException(status_code=500, detail=result["message"])
+
+    return result
+     
 
 if __name__ == "__main__":
     print("--- Starting Vanguard API on Port 8000---")
