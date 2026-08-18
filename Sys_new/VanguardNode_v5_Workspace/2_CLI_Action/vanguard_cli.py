@@ -56,6 +56,11 @@ def run_scan(target: str, output_json: bool):
         print(f"Error during scan execution: {e}")
         sys.exit(1)
 
-            
-            
+def main():
+    parser = argparse.ArgumentParser(description="VanguardNode CLI - Zero-Trust DecSecOps Scanner")
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
+    # scan command
+    scan_parser = subparsers.add_parser("scan", help="Run a full scan on a target directory")
+    scan_parser.add_argument("path", help="Target directory to scan")
+    scan_parser.add_argument("--json", action="store_true", help="Output machine-readable JSON for CI integration")
