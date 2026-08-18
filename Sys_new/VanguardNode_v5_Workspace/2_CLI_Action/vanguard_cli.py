@@ -51,7 +51,9 @@ def run_scan(target: str, output_json: bool):
             print("-" * 50)
 
             for f in risk_data['files']:
-                print(f"  > {f['file']} | R_file: {f['R_file']:.2f} | Findings: {len(f['findings'])}")
+                file_name = f.get('file_path') or f.get('file', 'Unknown File')
+                print(f"  > {file_name} | R_file: {f['R_file']:.2f} | Findings: {len(f['findings'])}")
+                
     except Exception as e:
         print(f"Error during scan execution: {e}")
         sys.exit(1)
