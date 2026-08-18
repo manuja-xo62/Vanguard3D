@@ -128,7 +128,7 @@ def execute_rollback(target_dir: str, file_path_rel: str) -> dict:
 
     if not backup_file.exists():
         return {
-            "Status": "Failed",
+            "status": "failed",
              "message": f"No backup found for {file_path_rel}"
              }
     try:
