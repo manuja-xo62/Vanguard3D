@@ -16,3 +16,46 @@ except ImportError as e:
     print(f"FATAL: Could not load backend modules. Ensure 1_Backend_Engine exist alongside 2_CLI_Action. Error : {e}")
     sys.exit(1)
 
+def run_scan(target: str, output_json: bool):
+    ##Run the scan and logs it in DB
+    init_db()
+
+    target_path = Path(target).resolve()
+    if not target_path.exists():
+        print(f"Error: Target Path '{target}' does not exist.")
+        sys.exit(1)
+    
+    if not output_json:
+        print(f"--- Vanguard CLI : Scanning {target_path} ---")
+    
+    try:
+        #parshing ASt
+        raw_findings = run_checkov_scan(str(target_path))
+
+        #Calculate risk scores
+        risk_data = calculate_risk(raw_findings)
+
+        #log the event in the DB
+        scan_id = f"clu_{uuid.uuid4(). hex[:8]}"
+        record_scan(scan_id, "cli", str(target_path), risk_data["R_global"], risk_data["files"])
+
+        #Output Results
+        if output_json:
+            #machineredable output for GitHub Actions / CI
+            print(json.dumps({"scan_id": scan_id, "data": risk_data}, indent=2))
+        else:
+            #human readable output
+            print(f"\n[+] Scan Complete. ID: {scan_id}")
+            print(f"[+] Global Risk Score (R_global): {risk_data['R_global']:.2f}")
+            print(f"[+] Files Processed: {len(risk_data['files'])}")
+            print("-" * 50)
+
+            for f in risk_data['files']:
+                print(f"  > {f['file']} | R_file: {f['R_file']:.2f} | Findings: {len(f['findings'])}")
+    except Exception as e:
+        print(f"Error during scan execution: {e}")
+        sys.exit(1)
+
+            
+            
+
