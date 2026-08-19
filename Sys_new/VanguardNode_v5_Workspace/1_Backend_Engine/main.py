@@ -40,8 +40,8 @@ class PatchRequest(BaseModel):
     target_directory: str = "../sample_repo"
     finding_id: str
 
-class TrainingScoreReuqest(BaseModel):
-    scenrio_id: str
+class TrainingScoreRequest(BaseModel):
+    scenario_id: str
     score: int
     time_taken_seconds: float
 
@@ -88,6 +88,7 @@ def trigger_patch(req: PatchRequest):
         return {"status": "patched", "event_id": event_id, "backup_path": msg}
     else:
         raise HTTPException(status_code=400, detail=msg)
+
 @app.get("/api/scan/{scan_id}")
 def get_scan(scan_id: str):
     ##retreive the scan history for replay mode
@@ -106,17 +107,17 @@ def get_replay(scan_id: str):
 
 @app.get("/api/training/scenarios")
 def list_training_scenarios():
-    secenarios_dir = Path(__file__).parent / "training_scenarios"
-    if not secenarios_dir.exists():
+    scenarios_dir = Path(__file__).parent / "training_scenarios"
+    if not scenarios_dir.exists():
         return []
     scenarios = []
-    for item in secenarios_dir.iterdir():
-        if item.is_file():
+    for item in scenarios_dir.iterdir():
+        if item.is_dir():
             scenarios.append({"id": item.name, "name": item.name.replace("_", " ").title(), "path": str(item)})
     return scenarios
 
 @app.post("/api/training/score")
-def submit_score(req: TrainingScoreReuqest):
+def submit_score(req: TrainingScoreRequest):
     ##Record the training score in the DB
     attempt_id = record_training_attempt(req.scenario_id, req.score, req.time_taken_seconds)
     return {"status": "success", "attempt_id": attempt_id}
@@ -146,5 +147,3 @@ def rollback_patch(req: RollbackRequest):
 if __name__ == "__main__":
     print("--- Starting Vanguard API on Port 8000---")
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
