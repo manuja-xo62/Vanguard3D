@@ -45,6 +45,13 @@ def init_db():
         backup_path TEXT,
         timestamp TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS training_attempts (
+        attempt_id TEXT PRIMARY KEY,
+        scenario_id TEXT,
+        score INTEGER,
+        time_taken_seconds REAL,
+        timestamp TEXT
     """)
 
     conn.commit()
