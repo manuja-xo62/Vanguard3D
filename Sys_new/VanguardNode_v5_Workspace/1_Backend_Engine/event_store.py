@@ -148,6 +148,23 @@ def get_scan_by_id(scan_id: str) -> Dict[str,Any]:
     result = dict(scan)
     result["findings"] = findings
     return result
+
+def get_replay_sequence(scan_id: str) -> List[Dict[str, Any]]:
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(""" 
+        SELECT p.event_id, p.timestamp, p.backup_path, f.finding_id, f.file_path, f.rule_id, f.severity
+        FROM patch_events p
+        JOIN findings f ON p.finding_id = f.finding_id
+        WHERE f.scan_id = ?
+        ORDER BY p.timestamp ASC
+    """, (scan_id, ))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
     
     
 
