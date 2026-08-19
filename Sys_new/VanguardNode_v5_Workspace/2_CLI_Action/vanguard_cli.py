@@ -144,7 +144,7 @@ def main():
     if args.command == "scan":
         run_scan(args.path, args.json)
     elif args.command == "comment-pr":
-        print("GitHub PR Integration Module coming soon...")
+        post_pr_comment(args.results)
 
 
 if __name__ == "__main__":
