@@ -1,5 +1,6 @@
 import uuid
 from pathlib import Path
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -15,7 +16,13 @@ from event_store import (
 from report_generator import generate_pdf_report
 from patch_service import execute_rollback
 
-app = FastAPI(title = "VanguardNode API", version = "5.0", description="Zero Trust Backend Engine")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ##Ensure the database is initialzied when the server starts
+    init_db()
+    yield
+
+app = FastAPI(title = "VanguardNode API", version = "5.0", description="Zero Trust Backend Engine", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,10 +53,6 @@ class TrainingScoreRequest(BaseModel):
     time_taken_seconds: float
 
 #API endpoints
-@app.on_event("startup")
-def startup_event():
-    ##Ensure the database is initialzied when the server starts
-    init_db()
 
 @app.post("/api/scan")
 def trigger_scan(req: ScanRequest):

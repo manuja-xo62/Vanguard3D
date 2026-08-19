@@ -52,6 +52,7 @@ def init_db():
         score INTEGER,
         time_taken_seconds REAL,
         timestamp TEXT
+    );
     """)
 
     conn.commit()
