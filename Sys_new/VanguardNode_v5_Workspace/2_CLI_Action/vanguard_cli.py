@@ -1,3 +1,4 @@
+from os import eventfd_read
 import argparse
 import sys
 import json
@@ -61,6 +62,30 @@ def run_scan(target: str, output_json: bool):
     except Exception as e:
         print(f"Error during scan execution: {e}")
         sys.exit(1)
+
+def post_pr_comment(results_path: str):
+    ##Formats scan JSOn into a Markdown and post it to GitHub PR via Rest Api
+    token = os.environ.get("GITHUB_TOKEN")
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+
+    if not token or not repo or not event_path:
+        print("Error: Missing required environement vriables (GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_EVENT_PATH)")
+        sys.exit(1)
+    #Extracting PR number from the payload
+
+    try:
+        with open(event_path, "r") as f:
+            event_data = json.load(f)
+            pr_number = event_data.get("pull_request", {}).get("number")
+    except Exception as e:
+        print(f"Error reading GITHUB_EVENT_PATH: {e}")
+        sys.exit(1)
+    
+    if not pr_number:
+        print("Not a pull request event. Skipping comment posting.")
+        return
+    
 
 def main():
     parser = argparse.ArgumentParser(description="VanguardNode CLI - Zero-Trust DecSecOps Scanner")
