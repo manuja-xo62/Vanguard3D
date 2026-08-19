@@ -129,8 +129,27 @@ def get_scan_history() -> List[Dict[str, Any]]:
     cursor.execute("SELECT scan_id, source, target_path, r_global, timestamp FROM scans ORDER BY timestamp DESC")
     rows = cursor.fetchall()
     conn.close()
-    
     return [dict(row) for row in rows]
+
+def get_scan_by_id(scan_id: str) -> Dict[str,Any]:
+    init_db()
+    conn = get_db_connection()
+    cursor = conn-cursor()
+    cursor.execute("SELECT *FROM scans Where scan_id = ?", {scan_id,})
+    scan = cursor.fetchone()
+    if not scan:
+        conn.close()
+        return{}
+    
+    cursor.execute("SELECT * FROM findings WHERE scan_id = ?", (scan_id,))
+    findings = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+
+    result = dict(scan)
+    result["findings"] = findings
+    return result
+    
+    
 
 
 if __name__ == "__main__":
