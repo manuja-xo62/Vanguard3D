@@ -1,5 +1,7 @@
 import uuid
-from fastapi import FastAPI, HTTPException
+from pathlib import Path
+from fastapi import FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
@@ -7,10 +9,21 @@ import uvicorn
 from checkov_parser import run_checkov_scan
 from risk_engine import calculate_risk
 from patch_service import apply_patch
-from event_store import record_scan, record_patch_event, get_scan_history, init_db
+from event_store import (
+    record_scan, record_patch_event, get_scan_history,
+    get_scan_by_id, get_replay_sequence, record_training_attempt, init_db)
+from report_generator import generate_pdf_report
 from patch_service import execute_rollback
 
 app = FastAPI(title = "VanguardNode API", version = "5.0", description="Zero Trust Backend Engine")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 #pydantic models for input validation
 class ScanRequest(BaseModel):
@@ -27,13 +40,18 @@ class PatchRequest(BaseModel):
     target_directory: str = "../sample_repo"
     finding_id: str
 
+class TrainingScoreReuqest(BaseModel):
+    scenrio_id: str
+    score: int
+    time_taken_seconds: float
+
 #API endpoints
 @app.on_event("startup")
 def startup_event():
     ##Ensure the database is initialzied when the server starts
     init_db()
 
-@app.post("/scan")
+@app.post("/api/scan")
 def trigger_scan(req: ScanRequest):
     ##Execute the checkhov scan to calculate the risks and logs the event
     try:
@@ -51,7 +69,7 @@ def trigger_scan(req: ScanRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/patch")
+@app.post("/api/patch")
 def trigger_patch(req: PatchRequest):
     ##Execute the AST guided patch and records the event int the DB
 
@@ -70,12 +88,48 @@ def trigger_patch(req: PatchRequest):
         return {"status": "patched", "event_id": event_id, "backup_path": msg}
     else:
         raise HTTPException(status_code=400, detail=msg)
-@app.get("/history")
-def get_history():
+@app.get("/api/scan/{scan_id}")
+def get_scan(scan_id: str):
     ##retreive the scan history for replay mode
-    return{"status": "success", "history": get_scan_history()}
+    scan = get_scan_by_id(scan_id)
+    if not scan:
+        raise HTTPException(status_code=404, detail="ScanID not found")
+    return scan
 
-@app.post("/rollback")
+@app.get("/api/events")
+def list_events():
+    return get_scan_history()
+
+@app.get("/api/events/{scan_id}/replay")
+def get_replay(scan_id: str):
+    return get_replay_sequence(scan_id)
+
+@app.get("/api/training/scenarios")
+def list_training_scenarios():
+    secenarios_dir = Path(__file__).parent / "training_scenarios"
+    if not secenarios_dir.exists():
+        return []
+    scenarios = []
+    for item in secenarios_dir.iterdir():
+        if item.is_file():
+            scenarios.append({"id": item.name, "name": item.name.replace("_", " ").title(), "path": str(item)})
+    return scenarios
+
+@app.post("/api/training/score")
+def submit_score(req: TrainingScoreReuqest):
+    ##Record the training score in the DB
+    attempt_id = record_training_attempt(req.scenario_id, req.score, req.time_taken_seconds)
+    return {"status": "success", "attempt_id": attempt_id}
+
+@app.get("/api/report/{scan_id}")
+def download_pdf_report(scan_id: str):
+    scan_data = get_scan_by_id(scan_id)
+    if not scan_data:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    pdf_bytes = generate_pdf_report(scan_data)
+    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=vanguard_report_{scan_id}.pdf"})
+
+@app.post("/api/rollback")
 def rollback_patch(req: RollbackRequest):
     ##rollback the previous patch
 
