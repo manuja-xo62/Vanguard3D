@@ -164,9 +164,19 @@ def get_replay_sequence(scan_id: str) -> List[Dict[str, Any]]:
     conn.close()
     return [dict(row) for row in rows]
 
+def record_training_attempt(scenario_id: str, score: int, time_taken: float) -> str:
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    attempt_id = f"att_{uuid.uuid4(). hex[:8]}"
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-    
-    
+    cursor.execute(
+        "INSERT INTO training_attempts (attempt_id, scenario_id, score, time_taken_seconds, timestamp) VALUES (?, ?, ?, ?, ?)",
+        (attempt_id, scenario_id, score, time_taken, now_iso) )
+    conn.commit()
+    conn.close()
+    return attempt_id
 
 
 if __name__ == "__main__":
