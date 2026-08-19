@@ -132,23 +132,26 @@ def get_scan_history() -> List[Dict[str, Any]]:
     conn.close()
     return [dict(row) for row in rows]
 
-def get_scan_by_id(scan_id: str) -> Dict[str,Any]:
-    init_db()
+def get_scan_by_id(scan_id: str) -> dict:
     conn = get_db_connection()
-    cursor = conn-cursor()
-    cursor.execute("SELECT *FROM scans Where scan_id = ?", {scan_id,})
-    scan = cursor.fetchone()
-    if not scan:
-        conn.close()
-        return{}
-    
-    cursor.execute("SELECT * FROM findings WHERE scan_id = ?", (scan_id,))
-    findings = [dict(row) for row in cursor.fetchall()]
-    conn.close()
+    conn.row_factory = sqlite3.Row  # Enables column access by name
+    cursor = conn.cursor()
 
-    result = dict(scan)
-    result["findings"] = findings
-    return result
+    cursor.execute("SELECT * FROM scans WHERE scan_id = ?", (scan_id,))
+    scan_row = cursor.fetchone()
+
+    if not scan_row:
+        conn.close()
+        return None
+
+    scan_dict = dict(scan_row)
+
+    cursor.execute("SELECT * FROM findings WHERE scan_id = ?", (scan_id,))
+    findings_rows = cursor.fetchall()
+    scan_dict["findings"] = [dict(row) for row in findings_rows]
+
+    conn.close()
+    return scan_dict
 
 def get_replay_sequence(scan_id: str) -> List[Dict[str, Any]]:
     init_db()

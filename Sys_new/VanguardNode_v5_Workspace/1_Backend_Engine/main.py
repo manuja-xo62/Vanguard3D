@@ -127,12 +127,22 @@ def submit_score(req: TrainingScoreRequest):
 
 @app.get("/api/report/{scan_id}")
 def download_pdf_report(scan_id: str):
-    scan_data = get_scan_by_id(scan_id)
-    if not scan_data:
-        raise HTTPException(status_code=404, detail="Scan not found")
-    pdf_bytes = generate_pdf_report(scan_data)
-    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=vanguard_report_{scan_id}.pdf"})
-
+    try:
+        scan_data = get_scan_by_id(scan_id)
+        if not scan_data:
+            raise HTTPException(status_code=404, detail=f"ScanID '{scan_id}' not found in database.")
+        
+        pdf_bytes = generate_pdf_report(scan_data)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=vanguard_report_{scan_id}.pdf"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF Error: {type(e).__name__} - {str(e)}")
+        
 @app.post("/api/rollback")
 def rollback_patch(req: RollbackRequest):
     ##rollback the previous patch

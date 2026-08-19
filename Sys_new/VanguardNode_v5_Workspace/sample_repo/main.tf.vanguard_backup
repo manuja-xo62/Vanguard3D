@@ -4,5 +4,5 @@ resource "aws_s3_bucket" "vanguard_demo_bucket" {
 
 resource "aws_s3_bucket_acl" "vanguard_demo_acl" {
   bucket = aws_s3_bucket.vanguard_demo_bucket.id
-  acl    = "private"
+  acl    = "public-read"
 }
