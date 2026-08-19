@@ -86,6 +86,15 @@ def post_pr_comment(results_path: str):
         print("Not a pull request event. Skipping comment posting.")
         return
     
+    #Read scan results JSON
+    with open(results_path, "r") as f:
+        scan_payload = json.load(f)
+    
+    data = scan_payload.get("data", {})
+    r_global = data.get("R_global", 0.0)
+    files = data.get("files", [])
+    
+    
 
 def main():
     parser = argparse.ArgumentParser(description="VanguardNode CLI - Zero-Trust DecSecOps Scanner")
