@@ -1,7 +1,10 @@
 import argparse
 import sys
 import json
+import os
 import uuid
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 #adding the backend to a sys.path so it doens't depend on the network
@@ -31,10 +34,11 @@ def run_scan(target: str, output_json: bool):
     try:
         #parshing ASt
         raw_findings = run_checkov_scan(str(target_path))
-
-        #Calculate risk scores
         risk_data = calculate_risk(raw_findings)
 
+        #filter the backup files from final result
+        risk_data["files"] = [f for f in risk_data["files"] if not f.get("file_path", "").endswith(".vanguard_backup")]
+        
         #log the event in the DB
         scan_id = f"clu_{uuid.uuid4(). hex[:8]}"
         record_scan(scan_id, "cli", str(target_path), risk_data["R_global"], risk_data["files"])
