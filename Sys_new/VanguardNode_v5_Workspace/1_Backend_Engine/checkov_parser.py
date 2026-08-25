@@ -8,31 +8,42 @@ from typing import Dict, List, Any
 
 
 def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[str, Any]:
-    ##Normalizes single Checkov findings into the app's standard data structure
+    ##Normalizes a single Checkov finding into the exact PascalCase keys required by the front end.
+
     file_abs = raw_check.get("file_path", "")
     try:
         rel_path = str(Path(file_abs).relative_to(Path(target_dir).resolve()))
     except ValueError:
         rel_path = file_abs.lstrip("/")
 
-    severity = raw_check.get("severity") or "MEDIUM"
+    # Safe extraction of line number
     file_line_range = raw_check.get("file_line_range", [0, 0])
+    line_num = file_line_range[0] if file_line_range else 0
 
+    # Code block to string extraction
+    code_block = raw_check.get("code_block", "")
+    if isinstance(code_block, list):
+        code_snippet_str = "".join([line[1] for line in code_block if len(line) > 1])
+    else:
+        code_snippet_str = str(code_block)
+
+    # Key names match FVanguardFinding in C++ exactly
     return {
-        "finding_id": f"fnd_{uuid.uuid4().hex[:8]}",
-        "rule_id": raw_check.get("check_id", "UNKNOWN_RULE"),
-        "rule_title": raw_check.get("check_name", "Unspecified Configuration Issue"),
-        "severity": severity.upper(),
-        "file_path": rel_path,
-        "resource_type": raw_check.get("resource", "default"),
-        "file_line_range": file_line_range,
-        "code_block": raw_check.get("code_block", []),
-        "status": "open"
+        "FindingId": f"fnd_{uuid.uuid4().hex[:8]}",
+        "RuleId": str(raw_check.get("check_id", "UNKNOWN_RULE")),
+        "RuleTitle": str(raw_check.get("check_name", "Unspecified Configuration Issue")),
+        "Severity": str(raw_check.get("severity", "HIGH")).capitalize(),
+        "FilePath": rel_path,
+        "LineNumber": int(line_num),
+        "Status": "VULNERABLE",
+        "CodeSnippet": code_snippet_str,
+        "RemediationHint": str(raw_check.get("guideline", "Review configuration guidelines."))
     }
 
 
-def run_checkov_scan(target_dir: str) -> List:
-    ##Executes Checkov CLI against the target directory and returns structured findings
+def run_checkov_scan(target_dir: str) -> Dict[str, Any]:
+    ##Executes Checkov CLI against the target directory and returns a structured payload matching the front end requirements.
+
     target_path = Path(target_dir).resolve()
     
     if not target_path.exists():
@@ -63,13 +74,21 @@ def run_checkov_scan(target_dir: str) -> List:
     if not raw_output:
         if result.stderr:
             print(f"[Checkov Parser Warning] Stderr: {result.stderr}")
-        return []
+        return {
+            "ScanId": f"scan_{uuid.uuid4().hex[:8]}",
+            "TotalFindings": 0,
+            "Findings": []
+        }
 
     try:
         data = json.loads(raw_output)
     except json.JSONDecodeError:
         print("[Checkov Parser Error] Failed to parse JSON output from Checkov.")
-        return []
+        return {
+            "ScanId": f"scan_{uuid.uuid4().hex[:8]}",
+            "TotalFindings": 0,
+            "Findings": []
+        }
 
     parsed_findings = []
 
@@ -88,15 +107,20 @@ def run_checkov_scan(target_dir: str) -> List:
         for check in failed_checks:
             parsed_findings.append(parse_checkov_finding(check, target_path_str))
 
-    return parsed_findings
+    # Returns exact match for FVanguardScanPayload
+    return {
+        "ScanId": f"scan_{uuid.uuid4().hex[:8]}",
+        "TotalFindings": len(parsed_findings),
+        "Findings": parsed_findings
+    }
 
 
 if __name__ == "__main__":
     test_dir = "../sample_repo" if len(sys.argv) < 2 else sys.argv[1]
     print(f"--- Testing Checkov Parser against '{test_dir}' ---")
     try:
-        findings = run_checkov_scan(test_dir)
-        print(f"Successfully extracted {len(findings)} findings:\n")
-        print(json.dumps(findings, indent=2))
+        payload = run_checkov_scan(test_dir)
+        print(f"Successfully extracted {payload['TotalFindings']} findings:\n")
+        print(json.dumps(payload, indent=2))
     except Exception as e:
         print(f"Parser Test Failed: {e}")
