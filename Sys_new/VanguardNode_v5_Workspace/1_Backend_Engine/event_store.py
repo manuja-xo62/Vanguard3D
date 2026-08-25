@@ -9,14 +9,14 @@ DB_PATH = Path(__file__).parent / "vanguard.db"
 
 
 def get_db_connection():
-    """Returns a SQLite connection object with row factory enabled."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=5000;")
     return conn
 
 
 def init_db():
-    """Initializes the database tables if they do not exist."""
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -26,7 +26,7 @@ def init_db():
         source TEXT,
         target_path TEXT,
         mode TEXT DEFAULT 'live',
-        r_global REAL,
+        r_global REAL DEFAULT 0.0,
         total_findings INTEGER DEFAULT 0,
         timestamp TEXT
     );
@@ -43,7 +43,7 @@ def init_db():
         code_snippet TEXT,
         remediation_hint TEXT,
         r_file REAL DEFAULT 0.0,
-        status TEXT
+        status TEXT DEFAULT 'VULNERABLE'
     );
 
     CREATE TABLE IF NOT EXISTS patch_events (
@@ -91,7 +91,6 @@ def record_scan(
     r_global: float = 0.0,
     files_data: Optional[List[Dict[str, Any]]] = None
 ):
-    """Logs scan data into SQLite tables. Accommodates direct finding lists and structured risk engine records."""
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -145,6 +144,85 @@ def record_scan(
     conn.close()
 
 
+def get_scan_by_id(scan_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM scans WHERE scan_id = ?", (scan_id,))
+    scan_row = cursor.fetchone()
+
+    if not scan_row:
+        conn.close()
+        return None
+
+    scan_dict = dict(scan_row)
+    cursor.execute("SELECT * FROM findings WHERE scan_id = ?", (scan_id,))
+    scan_dict["findings"] = [dict(row) for row in cursor.fetchall()]
+
+    conn.close()
+    return scan_dict
+
+
+def get_finding_by_id(finding_id: str) -> Optional[Dict[str, Any]]:
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM findings WHERE finding_id = ?", (finding_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def record_patch_event(finding_id: str, backup_path: str) -> str:
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    event_id = f"evt_{uuid.uuid4().hex[:8]}"
+
+    cursor.execute("UPDATE findings SET status = 'PATCHED' WHERE finding_id = ?", (finding_id,))
+    cursor.execute(
+        "INSERT OR REPLACE INTO patch_events (event_id, finding_id, backup_path, timestamp) VALUES (?, ?, ?, ?)",
+        (event_id, finding_id, backup_path, now_iso)
+    )
+
+    conn.commit()
+    conn.close()
+    return event_id
+
+
+def get_replay_sequence(scan_id: str) -> List[Dict[str, Any]]:
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(""" 
+        SELECT p.event_id, p.timestamp, p.backup_path, f.finding_id, f.file_path, f.rule_id, f.severity
+        FROM patch_events p
+        JOIN findings f ON p.finding_id = f.finding_id
+        WHERE f.scan_id = ?
+        ORDER BY p.timestamp ASC
+    """, (scan_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def record_training_attempt(scenario_id: str, score: int, time_taken: float) -> str:
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    attempt_id = f"att_{uuid.uuid4().hex[:8]}"
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    cursor.execute(
+        "INSERT INTO training_attempts (attempt_id, scenario_id, score, time_taken_seconds, timestamp) VALUES (?, ?, ?, ?, ?)",
+        (attempt_id, scenario_id, score, time_taken, now_iso)
+    )
+    conn.commit()
+    conn.close()
+    return attempt_id
+
+
 def record_event(
     event_type: str,
     pr_number: Optional[int] = None,
@@ -155,7 +233,6 @@ def record_event(
     rule_id: Optional[str] = None,
     payload: Optional[Dict[str, Any]] = None
 ) -> str:
-    """Logs atomic workflow events into the timeline_events SQLite table."""
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -178,32 +255,7 @@ def record_event(
     return event_id
 
 
-def load_scenario_data(scenario_id: str) -> Dict[str, Any]:
-    """Loads pre-seeded scenario datasets for training mode."""
-    return {
-        "ScanId": f"scenario_{scenario_id}",
-        "Mode": "training",
-        "ScenarioId": scenario_id,
-        "TotalFindings": 1,
-        "RiskScores": {"global_risk_score": 35.0, "R_global": 35.0},
-        "Findings": [
-            {
-                "FindingId": f"fnd_{scenario_id}_01",
-                "RuleId": "CKV_AWS_20",
-                "RuleTitle": "S3 Bucket Public Read",
-                "Severity": "HIGH",
-                "FilePath": "terraform/s3.tf",
-                "LineNumber": 12,
-                "CodeSnippet": 'acl = "public-read"',
-                "RemediationHint": "Set acl to private",
-                "Status": "VULNERABLE"
-            }
-        ]
-    }
-
-
 def get_all_scans() -> List[Dict[str, Any]]:
-    """Retrieves all historical scan records from SQLite."""
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -211,91 +263,3 @@ def get_all_scans() -> List[Dict[str, Any]]:
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
-
-
-def get_finding_by_id(finding_id: str) -> Optional[Dict[str, Any]]:
-    """Retrieves a single finding by its ID."""
-    init_db()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM findings WHERE finding_id = ?", (finding_id,))
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else None
-
-
-def record_patch_event(finding_id: str, backup_path: str) -> str:
-    """Logs successfully patched files."""
-    init_db()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    event_id = f"evt_{uuid.uuid4().hex[:8]}"
-
-    cursor.execute("UPDATE findings SET status = 'patched' WHERE finding_id = ?", (finding_id,))
-    cursor.execute(
-        "INSERT OR REPLACE INTO patch_events (event_id, finding_id, backup_path, timestamp) VALUES (?, ?, ?, ?)",
-        (event_id, finding_id, backup_path, now_iso)
-    )
-
-    conn.commit()
-    conn.close()
-    return event_id
-
-
-def get_scan_history() -> List[Dict[str, Any]]:
-    return get_all_scans()
-
-
-def get_scan_by_id(scan_id: str) -> Optional[Dict[str, Any]]:
-    """Retrieves a scan and all of its associated findings."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM scans WHERE scan_id = ?", (scan_id,))
-    scan_row = cursor.fetchone()
-
-    if not scan_row:
-        conn.close()
-        return None
-
-    scan_dict = dict(scan_row)
-    cursor.execute("SELECT * FROM findings WHERE scan_id = ?", (scan_id,))
-    scan_dict["findings"] = [dict(row) for row in cursor.fetchall()]
-
-    conn.close()
-    return scan_dict
-
-
-def get_replay_sequence(scan_id: str) -> List[Dict[str, Any]]:
-    """Retrieves chronological patch events for a scan session."""
-    init_db()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(""" 
-        SELECT p.event_id, p.timestamp, p.backup_path, f.finding_id, f.file_path, f.rule_id, f.severity
-        FROM patch_events p
-        JOIN findings f ON p.finding_id = f.finding_id
-        WHERE f.scan_id = ?
-        ORDER BY p.timestamp ASC
-    """, (scan_id,))
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
-
-
-def record_training_attempt(scenario_id: str, score: int, time_taken: float) -> str:
-    """Logs scenario scores for interactive exercises."""
-    init_db()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    attempt_id = f"att_{uuid.uuid4().hex[:8]}"
-    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-    cursor.execute(
-        "INSERT INTO training_attempts (attempt_id, scenario_id, score, time_taken_seconds, timestamp) VALUES (?, ?, ?, ?, ?)",
-        (attempt_id, scenario_id, score, time_taken, now_iso)
-    )
-    conn.commit()
-    conn.close()
-    return attempt_id

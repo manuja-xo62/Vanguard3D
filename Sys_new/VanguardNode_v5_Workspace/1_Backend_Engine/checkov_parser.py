@@ -8,7 +8,6 @@ from typing import Dict, List, Any
 
 
 def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[str, Any]:
-    """Normalizes a single Checkov finding into key-value pairings."""
     file_abs = raw_check.get("file_path", "")
     try:
         rel_path = str(Path(file_abs).relative_to(Path(target_dir).resolve()))
@@ -38,15 +37,14 @@ def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[st
 
 
 def run_checkov_scan(target_dir: str) -> Dict[str, Any]:
-    """Executes Checkov CLI against target directory and builds normalized output."""
     target_path = Path(target_dir).resolve()
-    
+
     if not target_path.exists():
         raise FileNotFoundError(f"Target directory does not exist: {target_dir}")
 
     target_path_str = str(target_path)
     checkov_bin = shutil.which("checkov")
-    
+
     if checkov_bin:
         cmd = [checkov_bin, "-d", target_path_str, "-o", "json", "--quiet"]
     else:

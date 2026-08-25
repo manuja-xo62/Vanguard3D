@@ -7,15 +7,20 @@ from checkov_parser import run_checkov_scan
 from risk_engine import calculate_risk
 from event_store import record_scan, init_db
 
+
 class IaCChangedHandler(FileSystemEventHandler):
     def __init__(self, target_dir: str):
         self.target_dir = target_dir
-    
+
     def on_modified(self, event):
-        if event.is_directory or event.src_path.endswith(".vanguard_backup"):
+        if event.is_directory:
             return
 
-        if any(event.src_path.endswith(ext) for ext in [".tf", ".yaml", ".yml", "Dockerfile"]):
+        src_str = str(event.src_path)
+        if src_str.endswith(".vanguard_backup") or src_str.endswith(".db") or "-wal" in src_str or "-shm" in src_str:
+            return
+
+        if any(src_str.endswith(ext) for ext in [".tf", ".yaml", ".yml", "Dockerfile"]):
             print(f"\n[Watchdog] Detected change in: {event.src_path}. Executing auto-scan...")
             try:
                 raw_scan = run_checkov_scan(self.target_dir)
@@ -33,6 +38,7 @@ class IaCChangedHandler(FileSystemEventHandler):
             except Exception as e:
                 print(f"[Watchdog Error] {e}")
 
+
 def start_daemon(target_directory: str):
     init_db()
     event_handler = IaCChangedHandler(target_directory)
@@ -46,6 +52,7 @@ def start_daemon(target_directory: str):
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
+
 
 if __name__ == "__main__":
     target = sys.argv[1] if len(sys.argv) > 1 else "../sample_repo"

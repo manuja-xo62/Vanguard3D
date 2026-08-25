@@ -1,75 +1,27 @@
 import os
-import io
 import json
-import sqlite3
 import asyncio
+import io
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-# --- Database & WAL Initialization ---
-DB_PATH = "vanguard.db"
+from event_store import (
+    init_db, record_scan, get_scan_by_id, get_replay_sequence,
+    record_training_attempt, record_patch_event, get_finding_by_id
+)
+from checkov_parser import run_checkov_scan
+from risk_engine import calculate_risk
+from patch_service import apply_patch, execute_rollback
+from report_generator import generate_pdf_report
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL;")
-    cursor.execute("PRAGMA busy_timeout=5000;")
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS scans (
-            scan_id TEXT PRIMARY KEY,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            global_risk_score REAL
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS findings (
-            finding_id TEXT PRIMARY KEY,
-            scan_id TEXT,
-            file_path TEXT,
-            line_number INTEGER,
-            rule_id TEXT,
-            status TEXT,
-            r_file REAL,
-            FOREIGN KEY(scan_id) REFERENCES scans(scan_id)
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS patch_events (
-            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            scan_id TEXT,
-            finding_id TEXT,
-            file_path TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS training_scores (
-            attempt_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT,
-            scenario_id TEXT,
-            score REAL,
-            completion_time_sec REAL
-        )
-    """)
-    conn.commit()
-    conn.close()
+app = FastAPI(title="Vanguard Backend Engine")
+event_queue: asyncio.Queue = asyncio.Queue()
 
 init_db()
-app = FastAPI(title="Vanguard Backend Engine")
-event_queue = asyncio.Queue()
 
-# --- Utility Functions & Path Resolver ---
-def safe_resolve_path(target_dir: str, relative_file: str) -> str:
-    """Resolves relative file paths safely against the target directory root context."""
-    base_path = os.path.abspath(target_dir)
-    resolved_path = os.path.abspath(os.path.join(base_path, relative_file))
-    if not resolved_path.startswith(base_path):
-        raise HTTPException(status_code=400, detail="Path traversal outside target directory.")
-    return resolved_path
 
-# --- Standardized Schemas for UVanguardHttpClient ---
 class FindingModel(BaseModel):
     findingId: str = Field(..., alias="finding_id")
     filePath: str = Field(..., alias="file_path")
@@ -81,163 +33,164 @@ class FindingModel(BaseModel):
     class Config:
         populate_by_name = True
 
+
 class PatchRequest(BaseModel):
     scanId: str
     findingId: str
     targetDir: str
     filePath: str
 
+
 class BatchPatchRequest(BaseModel):
     targetDir: str
     patches: List[PatchRequest]
 
+
 class RollbackRequest(BaseModel):
     targetDir: str
-    patchId: str
+    patchId: Optional[str] = None
+    filePath: str
+
 
 class TrainingScoreRequest(BaseModel):
-    userId: str
     scenarioId: str
     score: float
     completionTimeSec: float
 
-# --- Stubbed Engine Integrations ---
-def calculate_risk_scores(raw_findings: list):
-    """Calculates risk scores for individual files and the global system context."""
-    enriched = []
-    total_risk = 0.0
-    for idx, f in enumerate(raw_findings):
-        r_file = round(0.5 + (idx * 0.1), 2)
-        total_risk += r_file
-        enriched.append({
-            "finding_id": f.get("FindingId", f"FIND-{idx}"),
-            "file_path": f.get("FilePath", "terraform/main.tf"),
-            "line_number": f.get("LineNumber", 1),
-            "rule_id": f.get("RuleId", "CKV_AWS_1"),
-            "status": "VULNERABLE",
-            "r_file": r_file
-        })
-    global_score = round(total_risk / max(len(raw_findings), 1), 2)
-    return enriched, global_score
-
-def generate_pdf_report(scan_id: str) -> bytes:
-    """Generates audit PDF bytes for report streaming endpoints."""
-    return f"%PDF-1.4 Audit Report for Scan {scan_id}\n1 0 obj<<>>endobj".encode("utf-8")
-
-# --- API Endpoints ---
 
 @app.post("/api/scan")
-async def execute_scan(target_dir: str, raw_findings: list):
-    enriched_findings, global_risk = calculate_risk_scores(raw_findings)
-    scan_id = f"SCAN-{os.urandom(4).hex()}"
-    
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("INSERT INTO scans (scan_id, global_risk_score) VALUES (?, ?)", (scan_id, global_risk))
-    for f in enriched_findings:
-        c.execute("""
-            INSERT INTO findings (finding_id, scan_id, file_path, line_number, rule_id, status, r_file)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (f["finding_id"], scan_id, f["file_path"], f["line_number"], f["rule_id"], f["status"], f["r_file"]))
-    conn.commit()
-    conn.close()
+async def execute_scan(target_dir: str):
+    if not os.path.exists(target_dir):
+        raise HTTPException(status_code=404, detail=f"Target directory '{target_dir}' not found")
 
-    payload = {"scanId": scan_id, "globalRisk": global_risk, "findings": enriched_findings}
+    raw_scan = run_checkov_scan(target_dir)
+    risk_data = calculate_risk(raw_scan.get("Findings", []))
+
+    scan_id = raw_scan.get("ScanId", f"scan_{os.urandom(4).hex()}")
+
+    record_scan(
+        scan_id=scan_id,
+        target_dir=target_dir,
+        mode="api",
+        source="api",
+        total_findings=raw_scan.get("TotalFindings", 0),
+        r_global=risk_data.get("R_global", 0.0),
+        files_data=risk_data.get("files", [])
+    )
+
+    payload = {
+        "scanId": scan_id,
+        "globalRisk": risk_data.get("R_global", 0.0),
+        "files": risk_data.get("files", [])
+    }
     await event_queue.put({"event": "NEW_SCAN", "data": payload})
     return payload
 
+
 @app.get("/api/scan/{scan_id}")
 async def get_scan(scan_id: str):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT scan_id, global_risk_score FROM scans WHERE scan_id = ?", (scan_id,))
-    scan = c.fetchone()
-    if not scan:
-        conn.close()
+    scan_data = get_scan_by_id(scan_id)
+    if not scan_data:
         raise HTTPException(status_code=404, detail="Scan ID not found")
-    
-    c.execute("SELECT finding_id, file_path, line_number, rule_id, status, r_file FROM findings WHERE scan_id = ?", (scan_id,))
-    rows = c.fetchall()
-    conn.close()
-    
-    findings = [FindingModel(finding_id=r[0], file_path=r[1], line_number=r[2], rule_id=r[3], status=r[4], r_file=r[5]).dict(by_alias=True) for r in rows]
-    return {"scanId": scan[0], "globalRisk": scan[1], "findings": findings}
+
+    findings = [FindingModel(**f).dict(by_alias=True) for f in scan_data.get("findings", [])]
+    return {
+        "scanId": scan_data["scan_id"],
+        "globalRisk": scan_data.get("r_global", 0.0),
+        "findings": findings
+    }
+
 
 @app.get("/api/replay/{scan_id}")
-async def get_replay_sequence(scan_id: str):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT event_id, finding_id, file_path, timestamp FROM patch_events WHERE scan_id = ?", (scan_id,))
-    events = c.fetchall()
-    conn.close()
-    return [{"eventId": e[0], "findingId": e[1], "filePath": e[2], "timestamp": e[3]} for e in events]
+async def replay_sequence(scan_id: str):
+    events = get_replay_sequence(scan_id)
+    return [
+        {
+            "eventId": e.get("event_id"),
+            "findingId": e.get("finding_id"),
+            "filePath": e.get("file_path"),
+            "timestamp": e.get("timestamp")
+        }
+        for e in events
+    ]
+
 
 @app.get("/api/report/{scan_id}")
 async def stream_report(scan_id: str):
-    pdf_bytes = generate_pdf_report(scan_id)
+    scan_data = get_scan_by_id(scan_id)
+    if not scan_data:
+        raise HTTPException(status_code=404, detail="Scan ID not found")
+
+    pdf_bytes = generate_pdf_report(scan_data)
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=audit_{scan_id}.pdf"}
     )
 
-@app.post("/api/patch")
-async def apply_patch(req: PatchRequest):
-    abs_path = safe_resolve_path(req.targetDir, req.filePath)
-    if not os.path.exists(abs_path):
-        raise HTTPException(status_code=404, detail=f"Target file not found at {abs_path}")
 
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("UPDATE findings SET status = 'PATCHED' WHERE finding_id = ?", (req.findingId,))
-    c.execute("INSERT INTO patch_events (scan_id, finding_id, file_path) VALUES (?, ?, ?)", (req.scanId, req.findingId, abs_path))
-    conn.commit()
-    conn.close()
+@app.post("/api/patch")
+async def apply_single_patch(req: PatchRequest):
+    finding = get_finding_by_id(req.findingId)
+    rule_id = finding.get("rule_id", "") if finding else ""
+    line_num = finding.get("line_number", 0) if finding else 0
+
+    success, msg = apply_patch(
+        target_dir=req.targetDir,
+        file_path_rel=req.filePath,
+        rule_id=rule_id,
+        line_num=line_num
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+
+    backup_path = f"{req.filePath}.vanguard_backup"
+    record_patch_event(req.findingId, backup_path)
 
     await event_queue.put({"event": "PATCH_APPLIED", "findingId": req.findingId})
-    return {"status": "SUCCESS", "patchedFile": abs_path}
+    return {"status": "SUCCESS", "message": msg}
+
 
 @app.post("/api/patch_batch")
-async def apply_patch_batch(req: BatchPatchRequest):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+async def apply_batch_patch(req: BatchPatchRequest):
     applied = []
-
     for item in req.patches:
-        abs_path = safe_resolve_path(req.targetDir, item.filePath)
-        if os.path.exists(abs_path):
-            c.execute("UPDATE findings SET status = 'PATCHED' WHERE finding_id = ?", (item.findingId,))
-            c.execute("INSERT INTO patch_events (scan_id, finding_id, file_path) VALUES (?, ?, ?)", (item.scanId, item.findingId, abs_path))
+        finding = get_finding_by_id(item.findingId)
+        rule_id = finding.get("rule_id", "") if finding else ""
+        line_num = finding.get("line_number", 0) if finding else 0
+
+        success, _ = apply_patch(
+            target_dir=req.targetDir,
+            file_path_rel=item.filePath,
+            rule_id=rule_id,
+            line_num=line_num
+        )
+
+        if success:
+            record_patch_event(item.findingId, f"{item.filePath}.vanguard_backup")
             applied.append(item.findingId)
 
-    conn.commit()
-    conn.close()
-    
     await event_queue.put({"event": "BATCH_PATCH_COMPLETED", "appliedCount": len(applied)})
     return {"status": "SUCCESS", "appliedFindingIds": applied}
 
+
 @app.post("/api/rollback")
 async def rollback_patch(req: RollbackRequest):
-    backup_file = safe_resolve_path(req.targetDir, f".vanguard_backup/{req.patchId}.bak")
-    if not os.path.exists(backup_file):
-        raise HTTPException(status_code=404, detail="Backup snapshot not found.")
-    return {"status": "SUCCESS", "restoredFrom": backup_file}
+    result = execute_rollback(req.targetDir, req.filePath)
+    if result.get("status") != "success":
+        raise HTTPException(status_code=400, detail=result.get("message", "Rollback failed"))
+    return result
+
 
 @app.post("/api/training/submit")
 async def submit_training_score(req: TrainingScoreRequest):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("""
-        INSERT INTO training_scores (user_id, scenario_id, score, completion_time_sec)
-        VALUES (?, ?, ?, ?)
-    """, (req.userId, req.scenarioId, req.score, req.completionTimeSec))
-    conn.commit()
-    conn.close()
-    return {"status": "SUCCESS"}
+    attempt_id = record_training_attempt(req.scenarioId, int(req.score), req.completionTimeSec)
+    return {"status": "SUCCESS", "attemptId": attempt_id}
+
 
 @app.get("/api/events/stream")
 async def stream_events(request: Request):
-    """Server-Sent Events (SSE) stream allowing Unreal Engine client to receive push notifications."""
     async def event_generator():
         while True:
             if await request.is_disconnected():

@@ -5,7 +5,6 @@ from typing import Dict, List, Any, Union
 
 
 def load_config(config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
-    """Loads the editable risk weighting and remediation configuration file."""
     cfg_file = Path(config_path)
     if not cfg_file.exists():
         return {
@@ -26,18 +25,16 @@ def load_config(config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
                 }
             }
         }
-    
+
     try:
         with open(cfg_file, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
-            return data
+            return yaml.safe_load(f) or {}
     except Exception as e:
         print(f"[Risk Engine Warning] Failed to parse config file '{config_path}': {e}")
         return load_config("non_existent_path_to_trigger_fallback")
 
 
 def is_internet_facing(finding: Dict[str, Any]) -> bool:
-    """Detects exposure from Checkov resource metadata or rule characteristics."""
     rule_id = str(finding.get("RuleId") or finding.get("rule_id") or "")
     rule_title = str(finding.get("RuleTitle") or finding.get("rule_title") or "").lower()
     resource_type = str(finding.get("ResourceType") or finding.get("resource_type") or "").lower()
@@ -47,19 +44,18 @@ def is_internet_facing(finding: Dict[str, Any]) -> bool:
         return True
     if "s3_bucket" in resource_type and ("acl" in rule_id.lower() or "read" in rule_title):
         return True
-        
+
     return False
 
 
 def get_file_criticality(file_path: str, criticality_weights: Dict[str, float]) -> float:
-    """Matches file path against wildcard patterns in criticality weights."""
     normalized_path = file_path.replace("\\", "/").lstrip("/")
-    
+
     sorted_patterns = sorted(
         criticality_weights.items(),
         key=lambda item: (item[0] == "**", item[0] == "*", -len(item[0]))
     )
-    
+
     for pattern, weight in sorted_patterns:
         if fnmatch.fnmatch(normalized_path, pattern) or fnmatch.fnmatch(Path(normalized_path).name, pattern):
             return weight
@@ -67,11 +63,6 @@ def get_file_criticality(file_path: str, criticality_weights: Dict[str, float]) 
 
 
 def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
-    """
-    Applies the deterministic risk formula across all findings and files:
-    R_file = Σ (w_severity * w_exposure * w_blast_radius)
-    R_global = Σ (R_file * w_criticality) / Σ (w_criticality)
-    """
     if isinstance(findings, dict):
         findings = findings.get("Findings") or findings.get("findings") or []
 
@@ -114,10 +105,11 @@ def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config
             finding_copy = finding.copy()
             finding_copy["computed_score"] = finding_score
             finding_copy["exposure"] = facing
+            finding_copy["r_file"] = finding_score
             processed_findings.append(finding_copy)
 
         w_crit = get_file_criticality(file_path, crit_weights)
-        
+
         file_results.append({
             "file_path": file_path,
             "FilePath": file_path,

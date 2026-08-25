@@ -5,6 +5,7 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
+
 def generate_pdf_report(scan_data: Dict[str, Any]) -> bytes:
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
@@ -25,13 +26,18 @@ def generate_pdf_report(scan_data: Dict[str, Any]) -> bytes:
     story.append(Spacer(1, 12))
 
     table_data = [["File Path", "Risk Score (R_file)", "Status"]]
-    for f in scan_data.get("files", scan_data.get("Findings", [])):
+    findings = scan_data.get("findings", scan_data.get("Findings", []))
+    
+    for f in findings:
         path = f.get("file_path", f.get("FilePath", f.get("path", "Unknown")))
         raw_r_file = f.get("R_file", f.get("r_file", 0.0))
         r_file = float(raw_r_file) if raw_r_file is not None else 0.0
         status = f.get("status", f.get("Status", "Analyzed"))
         table_data.append([path, f"{r_file:.2f}", str(status)])
-    
+
+    if len(table_data) == 1:
+        table_data.append(["No findings reported", "0.00", "PASSED"])
+
     t = Table(table_data, colWidths=[300, 120, 100])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1E293B')),
