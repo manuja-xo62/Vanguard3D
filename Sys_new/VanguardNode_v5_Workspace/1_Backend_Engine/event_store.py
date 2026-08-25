@@ -1,6 +1,7 @@
 import sqlite3
 import datetime
 import uuid
+import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
@@ -8,14 +9,14 @@ DB_PATH = Path(__file__).parent / "vanguard.db"
 
 
 def get_db_connection():
-    ##Returns a SQLite connection object with row factory enabled.
+    """Returns a SQLite connection object with row factory enabled."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db():
-    ##Initializes the database tables if they do not exist.
+    """Initializes the database tables if they do not exist."""
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -24,6 +25,7 @@ def init_db():
         scan_id TEXT PRIMARY KEY,
         source TEXT,
         target_path TEXT,
+        mode TEXT DEFAULT 'live',
         r_global REAL,
         total_findings INTEGER DEFAULT 0,
         timestamp TEXT
@@ -51,6 +53,19 @@ def init_db():
         timestamp TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS timeline_events (
+        event_id TEXT PRIMARY KEY,
+        event_type TEXT,
+        pr_number INTEGER,
+        repository TEXT,
+        commit_sha TEXT,
+        finding_id TEXT,
+        target_file TEXT,
+        rule_id TEXT,
+        payload TEXT,
+        timestamp TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS training_attempts (
         attempt_id TEXT PRIMARY KEY,
         scenario_id TEXT,
@@ -67,23 +82,27 @@ def init_db():
 def record_scan(
     scan_id: str,
     target_dir: str = "",
+    mode: str = "live",
     total_findings: int = 0,
     findings: Optional[List[Dict[str, Any]]] = None,
+    risk_summary: Optional[Dict[str, Any]] = None,
     source: str = "api",
     target_path: str = "",
     r_global: float = 0.0,
     files_data: Optional[List[Dict[str, Any]]] = None
 ):
-
-    ##Logs scan data into SQLite tables. Accommodates both direct finding lists and structured risk engine file records.
-
+    """Logs scan data into SQLite tables. Accommodates both direct finding lists and structured risk engine file records."""
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
     now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     effective_target = target_dir or target_path
-    
+
+    # Extract global risk score if passed via risk_summary dict
+    if risk_summary and isinstance(risk_summary, dict):
+        r_global = risk_summary.get("global_risk_score", risk_summary.get("r_global", r_global))
+
     # Handle direct findings payload vs Risk Engine files_data structure
     raw_findings = findings if findings is not None else []
     if files_data and not raw_findings:
@@ -95,10 +114,10 @@ def record_scan(
     cursor.execute(
         """
         INSERT OR REPLACE INTO scans 
-        (scan_id, source, target_path, r_global, total_findings, timestamp) 
-        VALUES (?, ?, ?, ?, ?, ?)
+        (scan_id, source, target_path, mode, r_global, total_findings, timestamp) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
-        (scan_id, source, effective_target, r_global, effective_total, now_iso)
+        (scan_id, source, effective_target, mode, r_global, effective_total, now_iso)
     )
 
     for f in raw_findings:
@@ -112,6 +131,7 @@ def record_scan(
         snippet = f.get("CodeSnippet") or f.get("code_snippet", "")
         hint = f.get("RemediationHint") or f.get("remediation_hint", "")
         stat = f.get("Status") or f.get("status", "VULNERABLE")
+        r_file = f.get("r_file", 0.0)
 
         cursor.execute(
             """
@@ -131,7 +151,7 @@ def record_scan(
                 line_num,
                 snippet,
                 hint,
-                0.0,
+                r_file,
                 stat
             )
         )
@@ -140,19 +160,76 @@ def record_scan(
     conn.close()
 
 
-def get_all_scans() -> List[Dict[str, Any]]:
-    ##Retrieves all historical scan records from SQLite.
+def record_event(
+    event_type: str,
+    pr_number: Optional[int] = None,
+    repository: Optional[str] = None,
+    commit_sha: Optional[str] = None,
+    finding_id: Optional[str] = None,
+    target_file: Optional[str] = None,
+    rule_id: Optional[str] = None,
+    payload: Optional[Dict[str, Any]] = None
+) -> str:
+    """Logs atomic workflow events into the timeline_events SQLite table."""
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT scan_id, source, target_path, total_findings, r_global, timestamp FROM scans ORDER BY timestamp DESC")
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    event_id = f"evt_{uuid.uuid4().hex[:8]}"
+
+    payload_str = json.dumps(payload) if payload else "{}"
+
+    cursor.execute(
+        """
+        INSERT INTO timeline_events 
+        (event_id, event_type, pr_number, repository, commit_sha, finding_id, target_file, rule_id, payload, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (event_id, event_type, pr_number, repository, commit_sha, finding_id, target_file, rule_id, payload_str, now_iso)
+    )
+
+    conn.commit()
+    conn.close()
+    return event_id
+
+
+def load_scenario_data(scenario_id: str) -> Dict[str, Any]:
+    """Loads pre-seeded scenario datasets for training mode."""
+    return {
+        "ScanId": f"scenario_{scenario_id}",
+        "Mode": "training",
+        "ScenarioId": scenario_id,
+        "TotalFindings": 1,
+        "RiskScores": {"global_risk_score": 35.0},
+        "Findings": [
+            {
+                "FindingId": f"fnd_{scenario_id}_01",
+                "RuleId": "CKV_AWS_20",
+                "RuleTitle": "S3 Bucket Public Read",
+                "Severity": "HIGH",
+                "FilePath": "terraform/s3.tf",
+                "LineNumber": 12,
+                "CodeSnippet": "acl = \"public-read\"",
+                "RemediationHint": "Set acl to private",
+                "Status": "VULNERABLE"
+            }
+        ]
+    }
+
+
+def get_all_scans() -> List[Dict[str, Any]]:
+    """Retrieves all historical scan records from SQLite."""
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT scan_id, source, target_path, mode, total_findings, r_global, timestamp FROM scans ORDER BY timestamp DESC")
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
 
 
 def get_finding_by_id(finding_id: str) -> Optional[Dict[str, Any]]:
-    ##Retrieves a single finding by its ID for patching operations.
+    """Retrieves a single finding by its ID for patching operations."""
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -163,7 +240,7 @@ def get_finding_by_id(finding_id: str) -> Optional[Dict[str, Any]]:
 
 
 def record_patch_event(finding_id: str, backup_path: str) -> str:
-    ##Logs successfully patched files.
+    """Logs successfully patched files."""
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -186,12 +263,12 @@ def record_patch_event(finding_id: str, backup_path: str) -> str:
 
 
 def get_scan_history() -> List[Dict[str, Any]]:
-    ##Alias for get_all_scans for backward compatibility.
+    """Alias for get_all_scans for backward compatibility."""
     return get_all_scans()
 
 
 def get_scan_by_id(scan_id: str) -> Optional[Dict[str, Any]]:
-    ##Retrieves a scan and all of its associated findings.
+    """Retrieves a scan and all of its associated findings."""
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -213,7 +290,7 @@ def get_scan_by_id(scan_id: str) -> Optional[Dict[str, Any]]:
 
 
 def get_replay_sequence(scan_id: str) -> List[Dict[str, Any]]:
-    ##Retrieves chronological patch events for a scan session.
+    """Retrieves chronological patch events for a scan session."""
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -230,7 +307,7 @@ def get_replay_sequence(scan_id: str) -> List[Dict[str, Any]]:
 
 
 def record_training_attempt(scenario_id: str, score: int, time_taken: float) -> str:
-    ##Logs scenario scores for interactive exercises.
+    """Logs scenario scores for interactive exercises."""
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -267,8 +344,10 @@ if __name__ == "__main__":
     record_scan(
         scan_id=test_scan_id,
         target_dir="../sample_repo",
+        mode="live",
         total_findings=len(sample_findings),
-        findings=sample_findings
+        findings=sample_findings,
+        risk_summary={"global_risk_score": 25.0}
     )
     print(f"Recorded test scan: {test_scan_id}")
     
