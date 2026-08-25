@@ -6,7 +6,7 @@ from typing import Dict, Any, Tuple, List
 
 
 def is_docker_user_patched(content: str) -> bool:
-    ##Checks if a non-comment USER instruction or patch tag is present.
+    """Checks if a non-comment USER instruction or patch tag is present."""
     if "VANGUARD NANO-PATCH APPLIED" in content:
         return True
     for line in content.splitlines():
@@ -17,7 +17,7 @@ def is_docker_user_patched(content: str) -> bool:
 
 
 def is_s3_acl_patched(content: str) -> bool:
-    ##Returns True only if ACL is set to private and no public-read remains.
+    """Returns True only if ACL is set to private and no public-read remains."""
     has_private = bool(re.search(r'acl\s*=\s*"private"', content))
     has_public = bool(re.search(r'acl\s*=\s*"public-read"', content))
     return has_private and not has_public
@@ -39,8 +39,11 @@ REMEDIATION_TEMPLATES = {
 
 
 def create_backup(file_path: Path) -> Path:
-    ##Creates a zero-trust backup of the target file before mutation.
+    """Creates a zero-trust backup before mutation, preserving the initial unpatched backup across multi-patch calls."""
     backup_path = file_path.with_name(file_path.name + ".vanguard_backup")
+    if backup_path.exists():
+        # Preserve original backup to avoid overwriting unpatched baseline
+        return backup_path
     try:
         shutil.copy2(file_path, backup_path)
         return backup_path
@@ -49,9 +52,13 @@ def create_backup(file_path: Path) -> Path:
 
 
 def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: list) -> Tuple[bool, str]:
-    ##Executes the zero-trust patching sequence with comment-aware safeguards.
+    """Executes the zero-trust patching sequence with comment-aware safeguards and strict path checks."""
     target_path = Path(target_dir).resolve()
     file_path = (target_path / file_path_rel.lstrip("\\/")).resolve()
+
+    # Prevent directory traversal attacks
+    if not str(file_path).startswith(str(target_path)):
+        return False, f"Access denied: Target path '{file_path_rel}' escapes base directory."
 
     if not file_path.exists():
         return False, f"File not found: {file_path}"
@@ -87,18 +94,19 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
     if "search_pattern" in template:
         pattern = re.compile(template["search_pattern"])
         for i in range(start_line_idx, end_line_idx):
-            if pattern.search(lines[i]):
+            if i < len(lines) and pattern.search(lines[i]):
                 lines[i] = pattern.sub(template["patch_text"], lines[i])
                 patch_applied = True
                 break
 
     elif template.get("action") == "insert_user":
         for i in range(start_line_idx, end_line_idx):
-            clean_line = lines[i].strip().upper()
-            if clean_line.startswith("CMD") or clean_line.startswith("ENTRYPOINT"):
-                lines.insert(i, template["patch_text"])
-                patch_applied = True
-                break
+            if i < len(lines):
+                clean_line = lines[i].strip().upper()
+                if clean_line.startswith("CMD") or clean_line.startswith("ENTRYPOINT"):
+                    lines.insert(i, template["patch_text"])
+                    patch_applied = True
+                    break
         
         if not patch_applied and lines:
             insert_idx = min(end_line_idx, len(lines))
@@ -106,31 +114,33 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
             patch_applied = True
 
     if not patch_applied:
-        if backup_path.exists():
-            os.remove(backup_path)
         return False, "Failed to locate mutable target line within AST range."
 
     try:
         with open(file_path, 'w', encoding='utf-8') as f:
             f.writelines(lines)
     except Exception as e:
-        shutil.copy2(backup_path, file_path)
+        if backup_path.exists():
+            shutil.copy2(backup_path, file_path)
         return False, f"Failed to save patched file. Rolled back to backup. Error: {e}"
 
     return True, f"Successfully patched {rule_id}"
 
 
-def apply_patch_to_file(file_path: str, rule_id: str) -> Tuple[bool, str]:
-    ##Wrapper function to interface cleanly with main.py API endpoint calls.
-    path_obj = Path(file_path)
+def apply_patch_to_file(file_path: str, rule_id: str, line_range: list = None) -> Tuple[bool, str]:
+    """Wrapper function to interface cleanly with main.py API endpoint calls, accepting optional line_range."""
+    path_obj = Path(file_path).resolve()
+    if not path_obj.exists():
+        return False, f"File not found: {file_path}"
+        
     parent_dir = str(path_obj.parent)
     file_name = path_obj.name
-    return apply_patch(parent_dir, file_name, rule_id, [0, 0])
+    effective_range = line_range if line_range is not None else [0, 0]
+    return apply_patch(parent_dir, file_name, rule_id, effective_range)
 
 
 def apply_sequential_patches(findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    ##Line Drift Mitigation Engine: Sorts findings descending by LineNumber (bottom-to-top execution) to guarantee line index stability across sequential mutations.
-
+    """Line Drift Mitigation Engine: Sorts findings descending by LineNumber (bottom-to-top execution)."""
     sorted_findings = sorted(
         findings, 
         key=lambda f: f.get("LineNumber") or f.get("line_number") or 0, 
@@ -147,10 +157,10 @@ def apply_sequential_patches(findings: List[Dict[str, Any]]) -> List[Dict[str, A
         line_range = [line_num, line_num + 5] if line_num > 0 else [0, 0]
 
         if not f_path or not os.path.exists(f_path):
-            results.append({"finding_id": f_id, "status": "FAILED", "reason": "File not found"})
+            results.append({"finding_id": f_id, "status": "FAILED", "reason": f"File not found: {f_path}"})
             continue
 
-        path_obj = Path(f_path)
+        path_obj = Path(f_path).resolve()
         success, msg = apply_patch(str(path_obj.parent), path_obj.name, r_id, line_range)
         if success:
             results.append({"finding_id": f_id, "status": "PATCHED", "details": msg})
@@ -161,10 +171,14 @@ def apply_sequential_patches(findings: List[Dict[str, Any]]) -> List[Dict[str, A
 
 
 def execute_rollback(target_dir: str, file_path_rel: str) -> dict:
-    ##Restores the original file from the backup.
+    """Restores the original file from the backup."""
     base_dir = Path(target_dir).resolve()
-    active_file = base_dir / file_path_rel
-    backup_file = base_dir / f"{file_path_rel}.vanguard_backup"
+    active_file = (base_dir / file_path_rel.lstrip("\\/")).resolve()
+    
+    if not str(active_file).startswith(str(base_dir)):
+        return {"status": "error", "message": "Access denied: Path escapes target directory"}
+
+    backup_file = active_file.with_name(active_file.name + ".vanguard_backup")
 
     if not backup_file.exists():
         return {

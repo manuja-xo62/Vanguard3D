@@ -1,11 +1,10 @@
 import os
-import shutil
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# Internal module imports
 from checkov_parser import run_checkov_scan
 from patch_service import apply_patch_to_file
 from risk_engine import calculate_risk
@@ -28,7 +27,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="VanguardNode Backend Engine", version="5.0.0", lifespan=lifespan)
 
-# --- Pydantic API Request Schemas ---
 
 class FindingModel(BaseModel):
     finding_id: str
@@ -45,7 +43,7 @@ class FindingModel(BaseModel):
 
 class ScanRequest(BaseModel):
     target_directory: str = "../sample_repo"
-    mode: str = "live"  # Supported modes: live, replay, training
+    mode: str = "live"
     scenario_id: Optional[str] = None
 
 
@@ -75,8 +73,6 @@ class PRCommentRequest(BaseModel):
     comment_body: str
 
 
-# --- API Endpoints ---
-
 @app.get("/")
 def health_check():
     """Diagnostic health check for UE4 Settings & Diagnostics Screen."""
@@ -85,33 +81,27 @@ def health_check():
 
 @app.post("/api/scan")
 def trigger_scan(payload: ScanRequest):
-    """
-    Triggers Checkov AST scan or loads pre-seeded scenario datasets (Training mode).
-    Enriches findings with deterministic risk scores (R_file, R_global) and logs events.
-    """
+    """Triggers Checkov AST scan or loads pre-seeded scenario datasets (Training mode)."""
     if payload.mode == "training" and payload.scenario_id:
         try:
             return load_scenario_data(payload.scenario_id)
         except Exception as e:
             raise HTTPException(status_code=404, detail=f"Failed to load training scenario: {str(e)}")
 
-    if not os.path.exists(payload.target_directory):
+    target_path = Path(payload.target_directory).resolve()
+    if not target_path.exists():
         raise HTTPException(status_code=400, detail=f"Target directory '{payload.target_directory}' does not exist.")
 
     try:
-        # 1. Execute Checkov AST Scan
-        scan_payload = run_checkov_scan(payload.target_directory)
-        
-        # 2. Enrich payload with Risk Scoring Engine
+        scan_payload = run_checkov_scan(str(target_path))
         findings = scan_payload.get("Findings", [])
         risk_summary = calculate_risk(findings)
         scan_payload["RiskScores"] = risk_summary
         scan_payload["Mode"] = payload.mode
         
-        # 3. Persist scan record and timeline event into Event Store SQLite DB
         record_scan(
             scan_id=scan_payload.get("ScanId"),
-            target_dir=payload.target_directory,
+            target_dir=str(target_path),
             mode=payload.mode,
             total_findings=scan_payload.get("TotalFindings", 0),
             findings=findings,
@@ -125,10 +115,7 @@ def trigger_scan(payload: ScanRequest):
 
 @app.post("/api/scan-event")
 def ingest_ci_scan_event(payload: PREventRequest):
-    """
-    Ingests scan payloads directly from CI/CD pipeline triggers (e.g. GitHub Actions).
-    Stores event metadata for PR context rendering and Replay mode streaming.
-    """
+    """Ingests scan payloads directly from CI/CD pipeline triggers."""
     try:
         record_event(
             event_type="CI_SCAN_INGESTED",
@@ -144,9 +131,7 @@ def ingest_ci_scan_event(payload: PREventRequest):
 
 @app.post("/api/comment-pr")
 def post_pr_comment(payload: PRCommentRequest):
-    """
-    Dispatches automated PR comments and feedback into CI integration workflows.
-    """
+    """Dispatches automated PR comments into CI integration workflows."""
     try:
         record_event(
             event_type="PR_COMMENT_POSTED",
@@ -161,30 +146,20 @@ def post_pr_comment(payload: PRCommentRequest):
 
 @app.post("/api/patch")
 def apply_single_patch(payload: PatchRequest):
-    """
-    Applies remediation patch for a single finding passed from UE4 Holo Slate UI.
-    Includes .vanguard_backup creation for zero-trust safety.
-    """
+    """Applies remediation patch for a single finding passed from UE4 Holo Slate UI."""
     finding = get_finding_by_id(payload.finding_id)
     if not finding:
         raise HTTPException(status_code=404, detail=f"Finding ID '{payload.finding_id}' not found in event store.")
 
     target_file = finding.get("file_path") or finding.get("FilePath")
     rule_id = finding.get("rule_id") or finding.get("RuleId")
+    line_num = finding.get("line_number") or finding.get("LineNumber") or 0
 
     if not target_file or not os.path.exists(target_file):
         raise HTTPException(status_code=404, detail=f"Target file '{target_file}' not found on disk.")
 
-    # Create zero-trust backup before file mutation
-    backup_file = f"{target_file}.vanguard_backup"
-    if not os.path.exists(backup_file):
-        try:
-            shutil.copyfile(target_file, backup_file)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to create zero-trust backup: {str(e)}")
-
-    # Execute patch
-    patch_success, message = apply_patch_to_file(target_file, rule_id)
+    line_range = [line_num, line_num + 5] if line_num > 0 else [0, 0]
+    patch_success, message = apply_patch_to_file(target_file, rule_id, line_range=line_range)
     if not patch_success:
         raise HTTPException(status_code=400, detail=message)
 
@@ -201,9 +176,8 @@ def apply_single_patch(payload: PatchRequest):
 @app.post("/api/patch_batch")
 def apply_patches_sorted(payload: SequentialPatchRequest):
     """
-    Applies multiple patches sequentially.
-    Sorts modifications descending by line number (bottom-to-top) to eliminate line drift.
-    Fault-tolerant key resolution supports both PascalCase and snake_case models.
+    Applies multiple patches sequentially, descending by line number to eliminate drift.
+    Passes line ranges directly to apply_patch_to_file.
     """
     sorted_findings = sorted(
         payload.findings,
@@ -216,17 +190,12 @@ def apply_patches_sorted(payload: SequentialPatchRequest):
         target_file = finding.get('FilePath') or finding.get('file_path')
         rule_id = finding.get('RuleId') or finding.get('rule_id')
         finding_id = finding.get('FindingId') or finding.get('finding_id')
+        line_num = finding.get('LineNumber') or finding.get('line_number') or 0
 
         if target_file and os.path.exists(target_file):
-            backup_file = f"{target_file}.vanguard_backup"
-            if not os.path.exists(backup_file):
-                try:
-                    shutil.copyfile(target_file, backup_file)
-                except Exception as e:
-                    applied_results.append({"finding_id": finding_id, "status": "FAILED", "reason": f"Backup failed: {str(e)}"})
-                    continue
-
-            success, msg = apply_patch_to_file(target_file, rule_id)
+            line_range = [line_num, line_num + 5] if line_num > 0 else [0, 0]
+            success, msg = apply_patch_to_file(target_file, rule_id, line_range=line_range)
+            
             if success:
                 applied_results.append({"finding_id": finding_id, "status": "PATCHED"})
                 record_event(
@@ -245,23 +214,22 @@ def apply_patches_sorted(payload: SequentialPatchRequest):
 
 @app.post("/api/rollback")
 def rollback_patch(payload: RollbackRequest):
-    """
-    Reverts target file using its .vanguard_backup file.
-    Invoked by UE4 ExecuteRollback delegate.
-    """
+    """Reverts target file using its .vanguard_backup file safely."""
     original_file = payload.target_file
-    backup_file = f"{original_file}.vanguard_backup"
+    path_obj = Path(original_file).resolve()
+    backup_file = path_obj.with_name(path_obj.name + ".vanguard_backup")
 
-    if not os.path.exists(backup_file):
+    if not backup_file.exists():
         raise HTTPException(status_code=404, detail=f"No backup file found for '{original_file}'.")
 
     try:
-        shutil.copyfile(backup_file, original_file)
+        import shutil
+        shutil.copy2(backup_file, path_obj)
         os.remove(backup_file)
         
         record_event(
             event_type="ROLLBACK_EXECUTED",
-            target_file=original_file,
+            target_file=str(path_obj),
             finding_id=payload.finding_id
         )
         return {"status": "success", "message": f"Successfully reverted {original_file}"}
@@ -271,10 +239,7 @@ def rollback_patch(payload: RollbackRequest):
 
 @app.get("/api/history")
 def get_scan_history():
-    """
-    Retrieves historical scan records from SQLite database.
-    Populates UI data grid in WBP_ArchivePanel.
-    """
+    """Retrieves historical scan records from SQLite database."""
     try:
         history = get_all_scans()
         return {"status": "success", "history": history}

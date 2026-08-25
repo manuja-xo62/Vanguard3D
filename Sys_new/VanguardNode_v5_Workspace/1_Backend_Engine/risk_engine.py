@@ -8,7 +8,6 @@ def load_config(config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
     """Loads the editable risk weighting configuration file."""
     cfg_file = Path(config_path)
     if not cfg_file.exists():
-        # Fallback default values if config is missing
         return {
             "severity_weights": {"LOW": 1, "MEDIUM": 3, "HIGH": 7, "CRITICAL": 15},
             "exposure_multiplier": {"internet_facing": 2.0, "internal_only": 1.0},
@@ -26,7 +25,6 @@ def is_internet_facing(finding: Dict[str, Any]) -> bool:
     rule_title = str(finding.get("RuleTitle") or finding.get("rule_title") or "").lower()
     resource_type = str(finding.get("ResourceType") or finding.get("resource_type") or "").lower()
 
-    # Known rules or indicators
     public_indicators = ["public", "0.0.0.0/0", "acl", "exposure", "unauthenticated"]
     if any(ind in rule_id.lower() or ind in rule_title for ind in public_indicators):
         return True
@@ -37,11 +35,16 @@ def is_internet_facing(finding: Dict[str, Any]) -> bool:
 
 
 def get_file_criticality(file_path: str, criticality_weights: Dict[str, float]) -> float:
-    """Matches file path against wildcard patterns in criticality weights."""
-    # Normalize path separators
+    """Matches file path against wildcard patterns in criticality weights, prioritizing specific rules over catch-alls."""
     normalized_path = file_path.replace("\\", "/").lstrip("/")
     
-    for pattern, weight in criticality_weights.items():
+    # Sort patterns so universal wildcards ('**') are always evaluated last regardless of YAML key insertion order
+    sorted_patterns = sorted(
+        criticality_weights.items(),
+        key=lambda item: (item[0] == "**", item[0] == "*", -len(item[0]))
+    )
+    
+    for pattern, weight in sorted_patterns:
         if fnmatch.fnmatch(normalized_path, pattern) or fnmatch.fnmatch(Path(normalized_path).name, pattern):
             return weight
     return criticality_weights.get("**", 1.0)
@@ -52,11 +55,7 @@ def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config
     Applies the deterministic risk formula across all findings and files:
     R_file = Σ (w_severity * w_exposure * w_blast_radius)
     R_global = Σ (R_file * w_criticality) / Σ (w_criticality)
-    
-    Supports both raw Checkov payload dictionary and direct list of findings,
-    as well as PascalCase (C++/UE4 front-end) and snake_case finding structures.
     """
-    # Defensive extraction if full scan payload dictionary is passed
     if isinstance(findings, dict):
         findings = findings.get("Findings") or findings.get("findings") or []
 
@@ -66,7 +65,6 @@ def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config
     blast_weights = config.get("blast_radius_weights", {"default": 1.0})
     crit_weights = config.get("criticality_weights", {"**": 1.0})
 
-    # Group findings by file path
     files_map: Dict[str, List[Dict[str, Any]]] = {}
     for f in findings:
         f_path = f.get("FilePath") or f.get("file_path") or "unknown"
@@ -84,11 +82,9 @@ def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config
             severity = str(finding.get("Severity") or finding.get("severity") or "MEDIUM").upper()
             w_sev = sev_weights.get(severity, 3)
 
-            # Determine exposure multiplier
             facing = "internet_facing" if is_internet_facing(finding) else "internal_only"
             w_exp = exp_mult.get(facing, 1.0)
 
-            # Determine blast radius weight based on resource type
             res_type = str(finding.get("ResourceType") or finding.get("resource_type") or "default").lower()
             w_blast = blast_weights.get("default", 1.0)
             for k, val in blast_weights.items():
@@ -99,13 +95,11 @@ def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config
             finding_score = w_sev * w_exp * w_blast
             r_file += finding_score
 
-            # Attach calculated score metadata to finding for UI inspection
             finding_copy = finding.copy()
             finding_copy["computed_score"] = finding_score
             finding_copy["exposure"] = facing
             processed_findings.append(finding_copy)
 
-        # File criticality multiplier
         w_crit = get_file_criticality(file_path, crit_weights)
         
         file_results.append({
@@ -121,7 +115,6 @@ def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config
         total_weighted_risk += (r_file * w_crit)
         total_criticality_sum += w_crit
 
-    # Calculate global risk score
     r_global = round(total_weighted_risk / total_criticality_sum, 2) if total_criticality_sum > 0 else 0.0
 
     return {
