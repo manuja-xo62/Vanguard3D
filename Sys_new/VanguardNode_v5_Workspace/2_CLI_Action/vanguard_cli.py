@@ -41,8 +41,9 @@ def run_scan(target: str, output_json: bool):
         print(f"--- Vanguard CLI : Scanning {target_path} ---")
     
     try:
-        raw_findings = run_checkov_scan(str(target_path))
-        risk_data = calculate_risk(raw_findings)
+        raw_scan = run_checkov_scan(str(target_path))
+        findings = raw_scan.get("Findings", [])
+        risk_data = calculate_risk(findings)
 
         risk_data["files"] = [f for f in risk_data["files"] if not f.get("file_path", "").endswith(".vanguard_backup")]
         
@@ -138,10 +139,10 @@ def main():
 
     scan_parser = subparsers.add_parser("scan", help="Run a full scan on a target directory")
     scan_parser.add_argument("path", help="Target directory to scan")
-    scan_parser.add_argument("--json", action="store_true", help="Output machine-readable JSON for CI integration")
+    scan_parser.add_argument("--json", action="store_true", help="Output machine-readable JSON")
 
     pr_parser = subparsers.add_parser("comment-pr", help="Post findings as a GitHub PR comment")
-    pr_parser.add_argument("--results", required=True, help="Path to the JSON results file from a previous scan")
+    pr_parser.add_argument("--results", required=True, help="Path to JSON scan results file")
 
     args = parser.parse_args()
     

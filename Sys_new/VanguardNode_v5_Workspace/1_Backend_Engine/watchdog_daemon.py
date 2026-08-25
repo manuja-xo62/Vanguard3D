@@ -16,9 +16,10 @@ class IaCChangedHandler(FileSystemEventHandler):
             return
 
         if any(event.src_path.endswith(ext) for ext in [".tf", ".yaml", ".yml", "Dockerfile"]):
-            print(f"\n[Watchdog] Detected Change in: {event.src_path}. Executing auto-scan")
+            print(f"\n[Watchdog] Detected change in: {event.src_path}. Executing auto-scan...")
             try:
-                findings = run_checkov_scan(self.target_dir)
+                raw_scan = run_checkov_scan(self.target_dir)
+                findings = raw_scan.get("Findings", [])
                 risk_data = calculate_risk(findings)
                 record_scan(
                     scan_id=f"wd_{int(time.time())}",
@@ -38,7 +39,7 @@ def start_daemon(target_directory: str):
     observer = Observer()
     observer.schedule(event_handler, path=target_directory, recursive=True)
     observer.start()
-    print(f"--- vanguard Watchdog Daemon Active on '{target_directory}' ---")
+    print(f"--- Vanguard Watchdog Daemon Active on '{target_directory}' ---")
     try:
         while True:
             time.sleep(1)

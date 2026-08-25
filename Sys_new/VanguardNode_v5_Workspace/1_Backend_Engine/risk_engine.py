@@ -5,18 +5,35 @@ from typing import Dict, List, Any, Union
 
 
 def load_config(config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
-    """Loads the editable risk weighting configuration file."""
+    """Loads the editable risk weighting and remediation configuration file."""
     cfg_file = Path(config_path)
     if not cfg_file.exists():
         return {
             "severity_weights": {"LOW": 1, "MEDIUM": 3, "HIGH": 7, "CRITICAL": 15},
             "exposure_multiplier": {"internet_facing": 2.0, "internal_only": 1.0},
             "blast_radius_weights": {"iam_role": 3.0, "security_group": 2.0, "storage_bucket": 2.0, "default": 1.0},
-            "criticality_weights": {"prod/**": 3.0, "staging/**": 1.5, "**": 1.0}
+            "criticality_weights": {"prod/**": 3.0, "staging/**": 1.5, "**": 1.0},
+            "remediation_templates": {
+                "CKV_AWS_20": {
+                    "search_pattern": r'acl\s*=\s*"public-read"',
+                    "patch_text": 'acl    = "private" # [VANGUARD NANO-PATCH APPLIED]',
+                    "type": "replace"
+                },
+                "CKV_DOCKER_3": {
+                    "action": "insert_user",
+                    "patch_text": "USER vanguard_svc # [VANGUARD NANO-PATCH APPLIED]\n",
+                    "type": "insert"
+                }
+            }
         }
     
-    with open(cfg_file, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    try:
+        with open(cfg_file, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+            return data
+    except Exception as e:
+        print(f"[Risk Engine Warning] Failed to parse config file '{config_path}': {e}")
+        return load_config("non_existent_path_to_trigger_fallback")
 
 
 def is_internet_facing(finding: Dict[str, Any]) -> bool:
@@ -35,10 +52,9 @@ def is_internet_facing(finding: Dict[str, Any]) -> bool:
 
 
 def get_file_criticality(file_path: str, criticality_weights: Dict[str, float]) -> float:
-    """Matches file path against wildcard patterns in criticality weights, prioritizing specific rules over catch-alls."""
+    """Matches file path against wildcard patterns in criticality weights."""
     normalized_path = file_path.replace("\\", "/").lstrip("/")
     
-    # Sort patterns so universal wildcards ('**') are always evaluated last regardless of YAML key insertion order
     sorted_patterns = sorted(
         criticality_weights.items(),
         key=lambda item: (item[0] == "**", item[0] == "*", -len(item[0]))
@@ -122,18 +138,3 @@ def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config
         "r_global": r_global,
         "files": file_results
     }
-
-
-if __name__ == "__main__":
-    import sys
-    import json
-    from checkov_parser import run_checkov_scan
-
-    target_dir = "../sample_repo" if len(sys.argv) < 2 else sys.argv[1]
-    print(f"--- Testing Risk Engine against '{target_dir}' ---")
-    try:
-        raw_findings = run_checkov_scan(target_dir)
-        risk_output = calculate_risk(raw_findings)
-        print(json.dumps(risk_output, indent=2))
-    except Exception as e:
-        print(f"Risk Engine Test Failed: {e}")

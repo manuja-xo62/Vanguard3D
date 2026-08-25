@@ -91,7 +91,7 @@ def record_scan(
     r_global: float = 0.0,
     files_data: Optional[List[Dict[str, Any]]] = None
 ):
-    """Logs scan data into SQLite tables. Accommodates both direct finding lists and structured risk engine file records."""
+    """Logs scan data into SQLite tables. Accommodates direct finding lists and structured risk engine records."""
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -99,11 +99,9 @@ def record_scan(
 
     effective_target = target_dir or target_path
 
-    # Extract global risk score if passed via risk_summary dict
     if risk_summary and isinstance(risk_summary, dict):
-        r_global = risk_summary.get("global_risk_score", risk_summary.get("r_global", r_global))
+        r_global = risk_summary.get("global_risk_score", risk_summary.get("r_global", risk_summary.get("R_global", r_global)))
 
-    # Handle direct findings payload vs Risk Engine files_data structure
     raw_findings = findings if findings is not None else []
     if files_data and not raw_findings:
         for file_entry in files_data:
@@ -126,12 +124,12 @@ def record_scan(
         r_id = f.get("RuleId") or f.get("rule_id", "UNKNOWN")
         r_title = f.get("RuleTitle") or f.get("rule_title", "")
         sev = f.get("Severity") or f.get("severity", "MEDIUM")
-        res_type = f.get("resource_type", "default")
+        res_type = f.get("resource_type", f.get("ResourceType", "default"))
         line_num = f.get("LineNumber") or f.get("line_number", 0)
         snippet = f.get("CodeSnippet") or f.get("code_snippet", "")
         hint = f.get("RemediationHint") or f.get("remediation_hint", "")
         stat = f.get("Status") or f.get("status", "VULNERABLE")
-        r_file = f.get("r_file", 0.0)
+        r_file = f.get("R_file", f.get("r_file", 0.0))
 
         cursor.execute(
             """
@@ -140,20 +138,7 @@ def record_scan(
              resource_type, line_number, code_snippet, remediation_hint, r_file, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (
-                f_id,
-                scan_id,
-                file_p,
-                r_id,
-                r_title,
-                sev,
-                res_type,
-                line_num,
-                snippet,
-                hint,
-                r_file,
-                stat
-            )
+            (f_id, scan_id, file_p, r_id, r_title, sev, res_type, line_num, snippet, hint, r_file, stat)
         )
 
     conn.commit()
@@ -200,7 +185,7 @@ def load_scenario_data(scenario_id: str) -> Dict[str, Any]:
         "Mode": "training",
         "ScenarioId": scenario_id,
         "TotalFindings": 1,
-        "RiskScores": {"global_risk_score": 35.0},
+        "RiskScores": {"global_risk_score": 35.0, "R_global": 35.0},
         "Findings": [
             {
                 "FindingId": f"fnd_{scenario_id}_01",
@@ -209,7 +194,7 @@ def load_scenario_data(scenario_id: str) -> Dict[str, Any]:
                 "Severity": "HIGH",
                 "FilePath": "terraform/s3.tf",
                 "LineNumber": 12,
-                "CodeSnippet": "acl = \"public-read\"",
+                "CodeSnippet": 'acl = "public-read"',
                 "RemediationHint": "Set acl to private",
                 "Status": "VULNERABLE"
             }
@@ -229,7 +214,7 @@ def get_all_scans() -> List[Dict[str, Any]]:
 
 
 def get_finding_by_id(finding_id: str) -> Optional[Dict[str, Any]]:
-    """Retrieves a single finding by its ID for patching operations."""
+    """Retrieves a single finding by its ID."""
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -247,11 +232,7 @@ def record_patch_event(finding_id: str, backup_path: str) -> str:
     now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
     event_id = f"evt_{uuid.uuid4().hex[:8]}"
 
-    cursor.execute(
-        "UPDATE findings SET status = 'patched' WHERE finding_id = ?",
-        (finding_id,)
-    )
-
+    cursor.execute("UPDATE findings SET status = 'patched' WHERE finding_id = ?", (finding_id,))
     cursor.execute(
         "INSERT OR REPLACE INTO patch_events (event_id, finding_id, backup_path, timestamp) VALUES (?, ?, ?, ?)",
         (event_id, finding_id, backup_path, now_iso)
@@ -263,7 +244,6 @@ def record_patch_event(finding_id: str, backup_path: str) -> str:
 
 
 def get_scan_history() -> List[Dict[str, Any]]:
-    """Alias for get_all_scans for backward compatibility."""
     return get_all_scans()
 
 
@@ -280,10 +260,8 @@ def get_scan_by_id(scan_id: str) -> Optional[Dict[str, Any]]:
         return None
 
     scan_dict = dict(scan_row)
-
     cursor.execute("SELECT * FROM findings WHERE scan_id = ?", (scan_id,))
-    findings_rows = cursor.fetchall()
-    scan_dict["findings"] = [dict(row) for row in findings_rows]
+    scan_dict["findings"] = [dict(row) for row in cursor.fetchall()]
 
     conn.close()
     return scan_dict
@@ -321,35 +299,3 @@ def record_training_attempt(scenario_id: str, score: int, time_taken: float) -> 
     conn.commit()
     conn.close()
     return attempt_id
-
-
-if __name__ == "__main__":
-    print("--- Testing SQLite Event Store ---")
-    init_db()
-    print("Database `vanguard.db` initialized successfully.")
-    
-    test_scan_id = f"scan_{uuid.uuid4().hex[:8]}"
-    sample_findings = [{
-        "FindingId": f"fnd_{uuid.uuid4().hex[:8]}",
-        "FilePath": "main.tf",
-        "RuleId": "CKV_AWS_20",
-        "RuleTitle": "S3 Bucket Public Read",
-        "Severity": "HIGH",
-        "LineNumber": 12,
-        "CodeSnippet": "acl = 'public-read'",
-        "RemediationHint": "Set ACL to private",
-        "Status": "VULNERABLE"
-    }]
-    
-    record_scan(
-        scan_id=test_scan_id,
-        target_dir="../sample_repo",
-        mode="live",
-        total_findings=len(sample_findings),
-        findings=sample_findings,
-        risk_summary={"global_risk_score": 25.0}
-    )
-    print(f"Recorded test scan: {test_scan_id}")
-    
-    history = get_all_scans()
-    print(f"Total stored scans: {len(history)}")

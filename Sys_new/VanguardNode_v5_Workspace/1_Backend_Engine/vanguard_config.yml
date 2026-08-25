@@ -18,3 +18,13 @@ criticality_weights:
   "prod/**": 3.0
   "staging/**": 1.5
   "**": 1.0
+
+remediation_templates:
+  CKV_AWS_20:
+    search_pattern: 'acl\s*=\s*"public-read"'
+    patch_text: 'acl    = "private" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_DOCKER_3:
+    action: "insert_user"
+    patch_text: "USER vanguard_svc # [VANGUARD NANO-PATCH APPLIED]\n"
+    type: "insert"

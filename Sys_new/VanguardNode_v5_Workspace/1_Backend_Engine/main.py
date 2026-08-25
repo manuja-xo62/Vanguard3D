@@ -1,12 +1,12 @@
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from checkov_parser import run_checkov_scan
-from patch_service import apply_patch_to_file
+from patch_service import apply_patch_to_file, apply_sequential_patches, execute_rollback
 from risk_engine import calculate_risk
 from event_store import (
     init_db,
@@ -20,25 +20,12 @@ from event_store import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle context manager replacing deprecated @app.on_event startup/shutdown handlers."""
+    """Lifecycle context manager initializing database state."""
     init_db()
     yield
 
 
-app = FastAPI(title="VanguardNode Backend Engine", version="5.0.0", lifespan=lifespan)
-
-
-class FindingModel(BaseModel):
-    finding_id: str
-    rule_id: str
-    rule_title: Optional[str] = ""
-    severity: str
-    file_path: str
-    line_number: int
-    is_internet_facing: Optional[bool] = False
-    resource_type: Optional[str] = "container"
-    code_snippet: Optional[str] = ""
-    remediation_hint: Optional[str] = ""
+app = FastAPI(title="VanguardNode Backend Engine", version="5.1.0", lifespan=lifespan)
 
 
 class ScanRequest(BaseModel):
@@ -52,19 +39,20 @@ class PatchRequest(BaseModel):
 
 
 class SequentialPatchRequest(BaseModel):
-    findings: List[dict]
+    findings: List[Dict[str, Any]]
 
 
 class RollbackRequest(BaseModel):
-    finding_id: str
+    finding_id: Optional[str] = None
     target_file: str
+    target_dir: Optional[str] = "."
 
 
 class PREventRequest(BaseModel):
     pr_number: int
     repository: str
     commit_sha: str
-    scan_payload: dict
+    scan_payload: Dict[str, Any]
 
 
 class PRCommentRequest(BaseModel):
@@ -75,13 +63,13 @@ class PRCommentRequest(BaseModel):
 
 @app.get("/")
 def health_check():
-    """Diagnostic health check for UE4 Settings & Diagnostics Screen."""
-    return {"status": "ONLINE", "service": "VanguardNode Engine", "version": "5.0.0"}
+    """Diagnostic health check."""
+    return {"status": "ONLINE", "service": "VanguardNode Engine", "version": "5.1.0"}
 
 
 @app.post("/api/scan")
 def trigger_scan(payload: ScanRequest):
-    """Triggers Checkov AST scan or loads pre-seeded scenario datasets (Training mode)."""
+    """Triggers Checkov AST scan or loads pre-seeded scenario datasets."""
     if payload.mode == "training" and payload.scenario_id:
         try:
             return load_scenario_data(payload.scenario_id)
@@ -146,7 +134,7 @@ def post_pr_comment(payload: PRCommentRequest):
 
 @app.post("/api/patch")
 def apply_single_patch(payload: PatchRequest):
-    """Applies remediation patch for a single finding passed from UE4 Holo Slate UI."""
+    """Applies dynamic scope-aware remediation patch for a single finding."""
     finding = get_finding_by_id(payload.finding_id)
     if not finding:
         raise HTTPException(status_code=404, detail=f"Finding ID '{payload.finding_id}' not found in event store.")
@@ -158,8 +146,7 @@ def apply_single_patch(payload: PatchRequest):
     if not target_file or not os.path.exists(target_file):
         raise HTTPException(status_code=404, detail=f"Target file '{target_file}' not found on disk.")
 
-    line_range = [line_num, line_num + 5] if line_num > 0 else [0, 0]
-    patch_success, message = apply_patch_to_file(target_file, rule_id, line_range=line_range)
+    patch_success, message = apply_patch_to_file(target_file, rule_id, line_num=line_num)
     if not patch_success:
         raise HTTPException(status_code=400, detail=message)
 
@@ -175,66 +162,27 @@ def apply_single_patch(payload: PatchRequest):
 
 @app.post("/api/patch_batch")
 def apply_patches_sorted(payload: SequentialPatchRequest):
-    """
-    Applies multiple patches sequentially, descending by line number to eliminate drift.
-    Passes line ranges directly to apply_patch_to_file.
-    """
-    sorted_findings = sorted(
-        payload.findings,
-        key=lambda x: x.get('LineNumber', x.get('line_number', 0)),
-        reverse=True
-    )
-    applied_results = []
-
-    for finding in sorted_findings:
-        target_file = finding.get('FilePath') or finding.get('file_path')
-        rule_id = finding.get('RuleId') or finding.get('rule_id')
-        finding_id = finding.get('FindingId') or finding.get('finding_id')
-        line_num = finding.get('LineNumber') or finding.get('line_number') or 0
-
-        if target_file and os.path.exists(target_file):
-            line_range = [line_num, line_num + 5] if line_num > 0 else [0, 0]
-            success, msg = apply_patch_to_file(target_file, rule_id, line_range=line_range)
-            
-            if success:
-                applied_results.append({"finding_id": finding_id, "status": "PATCHED"})
-                record_event(
-                    event_type="BATCH_PATCH_APPLIED",
-                    finding_id=finding_id,
-                    target_file=target_file,
-                    rule_id=rule_id
-                )
-            else:
-                applied_results.append({"finding_id": finding_id, "status": "FAILED", "reason": msg})
-        else:
-            applied_results.append({"finding_id": finding_id, "status": "FAILED", "reason": f"File path '{target_file}' invalid or missing."})
-
-    return {"status": "success", "applied": applied_results}
+    """Applies multiple patches sequentially, descending by line number to eliminate drift."""
+    results = apply_sequential_patches(payload.findings)
+    return {"status": "success", "applied": results}
 
 
 @app.post("/api/rollback")
 def rollback_patch(payload: RollbackRequest):
     """Reverts target file using its .vanguard_backup file safely."""
-    original_file = payload.target_file
-    path_obj = Path(original_file).resolve()
-    backup_file = path_obj.with_name(path_obj.name + ".vanguard_backup")
+    result = execute_rollback(payload.target_dir or ".", payload.target_file)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=500, detail=result.get("message"))
+    elif result.get("status") == "failed":
+        raise HTTPException(status_code=404, detail=result.get("message"))
 
-    if not backup_file.exists():
-        raise HTTPException(status_code=404, detail=f"No backup file found for '{original_file}'.")
+    record_event(
+        event_type="ROLLBACK_EXECUTED",
+        target_file=payload.target_file,
+        finding_id=payload.finding_id
+    )
 
-    try:
-        import shutil
-        shutil.copy2(backup_file, path_obj)
-        os.remove(backup_file)
-        
-        record_event(
-            event_type="ROLLBACK_EXECUTED",
-            target_file=str(path_obj),
-            finding_id=payload.finding_id
-        )
-        return {"status": "success", "message": f"Successfully reverted {original_file}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Rollback failed: {str(e)}")
+    return result
 
 
 @app.get("/api/history")
