@@ -8,7 +8,7 @@ from pydantic import BaseModel
 # Internal module imports
 from checkov_parser import run_checkov_scan
 from patch_service import apply_patch_to_file
-from risk_engine import calculate_risk_scores
+from risk_engine import calculate_risk
 from event_store import (
     init_db,
     record_scan,
@@ -104,7 +104,7 @@ def trigger_scan(payload: ScanRequest):
         
         # 2. Enrich payload with Risk Scoring Engine
         findings = scan_payload.get("Findings", [])
-        risk_summary = calculate_risk_scores(findings)
+        risk_summary = calculate_risk(findings)
         scan_payload["RiskScores"] = risk_summary
         scan_payload["Mode"] = payload.mode
         

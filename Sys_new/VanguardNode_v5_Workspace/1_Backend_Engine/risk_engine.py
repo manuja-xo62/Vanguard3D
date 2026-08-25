@@ -1,12 +1,11 @@
 import fnmatch
 import yaml
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 
 
 def load_config(config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
-    #Loads the editable risk weighting configuration file
-
+    """Loads the editable risk weighting configuration file."""
     cfg_file = Path(config_path)
     if not cfg_file.exists():
         # Fallback default values if config is missing
@@ -22,12 +21,12 @@ def load_config(config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
 
 
 def is_internet_facing(finding: Dict[str, Any]) -> bool:
-    #Detects exposure from chekhov resource metadata or rule characterists
-    rule_id = finding.get("rule_id", "")
-    rule_title = finding.get("rule_title", "").lower()
-    resource_type = finding.get("resource_type", "").lower()
+    """Detects exposure from Checkov resource metadata or rule characteristics."""
+    rule_id = str(finding.get("RuleId") or finding.get("rule_id") or "")
+    rule_title = str(finding.get("RuleTitle") or finding.get("rule_title") or "").lower()
+    resource_type = str(finding.get("ResourceType") or finding.get("resource_type") or "").lower()
 
-    #Known rules or indicators
+    # Known rules or indicators
     public_indicators = ["public", "0.0.0.0/0", "acl", "exposure", "unauthenticated"]
     if any(ind in rule_id.lower() or ind in rule_title for ind in public_indicators):
         return True
@@ -38,8 +37,7 @@ def is_internet_facing(finding: Dict[str, Any]) -> bool:
 
 
 def get_file_criticality(file_path: str, criticality_weights: Dict[str, float]) -> float:
-    #Matches file path against wildcard patterns in criticality weights
-
+    """Matches file path against wildcard patterns in criticality weights."""
     # Normalize path separators
     normalized_path = file_path.replace("\\", "/").lstrip("/")
     
@@ -49,12 +47,19 @@ def get_file_criticality(file_path: str, criticality_weights: Dict[str, float]) 
     return criticality_weights.get("**", 1.0)
 
 
-def calculate_risk(findings: List[Dict[str, Any]], config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
+def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
     """
     Applies the deterministic risk formula across all findings and files:
     R_file = Σ (w_severity * w_exposure * w_blast_radius)
     R_global = Σ (R_file * w_criticality) / Σ (w_criticality)
+    
+    Supports both raw Checkov payload dictionary and direct list of findings,
+    as well as PascalCase (C++/UE4 front-end) and snake_case finding structures.
     """
+    # Defensive extraction if full scan payload dictionary is passed
+    if isinstance(findings, dict):
+        findings = findings.get("Findings") or findings.get("findings") or []
+
     config = load_config(config_path)
     sev_weights = config.get("severity_weights", {"LOW": 1, "MEDIUM": 3, "HIGH": 7, "CRITICAL": 15})
     exp_mult = config.get("exposure_multiplier", {"internet_facing": 2.0, "internal_only": 1.0})
@@ -64,7 +69,7 @@ def calculate_risk(findings: List[Dict[str, Any]], config_path: str = "vanguard_
     # Group findings by file path
     files_map: Dict[str, List[Dict[str, Any]]] = {}
     for f in findings:
-        f_path = f.get("file_path", "unknown")
+        f_path = f.get("FilePath") or f.get("file_path") or "unknown"
         files_map.setdefault(f_path, []).append(f)
 
     file_results = []
@@ -76,7 +81,7 @@ def calculate_risk(findings: List[Dict[str, Any]], config_path: str = "vanguard_
         processed_findings = []
 
         for finding in file_findings:
-            severity = finding.get("severity", "MEDIUM").upper()
+            severity = str(finding.get("Severity") or finding.get("severity") or "MEDIUM").upper()
             w_sev = sev_weights.get(severity, 3)
 
             # Determine exposure multiplier
@@ -84,7 +89,7 @@ def calculate_risk(findings: List[Dict[str, Any]], config_path: str = "vanguard_
             w_exp = exp_mult.get(facing, 1.0)
 
             # Determine blast radius weight based on resource type
-            res_type = finding.get("resource_type", "default").lower()
+            res_type = str(finding.get("ResourceType") or finding.get("resource_type") or "default").lower()
             w_blast = blast_weights.get("default", 1.0)
             for k, val in blast_weights.items():
                 if k in res_type:
@@ -105,8 +110,10 @@ def calculate_risk(findings: List[Dict[str, Any]], config_path: str = "vanguard_
         
         file_results.append({
             "file_path": file_path,
+            "FilePath": file_path,
             "findings_count": len(file_findings),
             "R_file": round(r_file, 2),
+            "r_file": round(r_file, 2),
             "file_criticality": w_crit,
             "findings": processed_findings
         })
@@ -119,6 +126,7 @@ def calculate_risk(findings: List[Dict[str, Any]], config_path: str = "vanguard_
 
     return {
         "R_global": r_global,
+        "r_global": r_global,
         "files": file_results
     }
 
