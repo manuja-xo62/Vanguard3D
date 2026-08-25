@@ -12,7 +12,7 @@ class IaCChangedHandler(FileSystemEventHandler):
         self.target_dir = target_dir
     
     def on_modified(self, event):
-        if event.is_directort or event.src_path.endswith(".vanguard_backup"):
+        if event.is_directory or event.src_path.endswith(".vanguard_backup"):
             return
 
         if any(event.src_path.endswith(ext) for ext in [".tf", ".yaml", ".yml", "Dockerfile"]):
@@ -20,7 +20,14 @@ class IaCChangedHandler(FileSystemEventHandler):
             try:
                 findings = run_checkov_scan(self.target_dir)
                 risk_data = calculate_risk(findings)
-                record_scan(f"wd_{int(time.time())}", "watchdog", self.target_dir, risk_data["R_global"], risk_data["files"])
+                record_scan(
+                    scan_id=f"wd_{int(time.time())}",
+                    target_dir=self.target_dir,
+                    mode="watchdog",
+                    source="watchdog",
+                    r_global=risk_data["R_global"],
+                    files_data=risk_data["files"]
+                )
                 print(f"[Watchdog] Auto-Scan logged. New R_global: {risk_data['R_global']:.2f}")
             except Exception as e:
                 print(f"[Watchdog Error] {e}")
