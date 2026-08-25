@@ -1,8 +1,8 @@
 import os
-import shutil
 import re
+import shutil
 from pathlib import Path
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, List
 
 
 def is_docker_user_patched(content: str) -> bool:
@@ -11,7 +11,6 @@ def is_docker_user_patched(content: str) -> bool:
         return True
     for line in content.splitlines():
         stripped = line.strip()
-        # Ignore Dockerfile comments (#) and check for actual USER instruction
         if not stripped.startswith("#") and stripped.upper().startswith("USER "):
             return True
     return False
@@ -35,10 +34,8 @@ REMEDIATION_TEMPLATES = {
         "action": "insert_user",
         "patch_text": "USER vanguard_svc # [VANGUARD NANO-PATCH APPLIED]\n",
         "check_already_patched": is_docker_user_patched
-    }
+    },
 }
-
-#More rules will be added later
 
 
 def create_backup(file_path: Path) -> Path:
@@ -52,7 +49,7 @@ def create_backup(file_path: Path) -> Path:
 
 
 def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: list) -> Tuple[bool, str]:
-   ##Executes the zero-trust patching sequence with comment-aware safeguards.
+    ##Executes the zero-trust patching sequence with comment-aware safeguards.
     target_path = Path(target_dir).resolve()
     file_path = (target_path / file_path_rel.lstrip("\\/")).resolve()
 
@@ -67,23 +64,26 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
 
     template = REMEDIATION_TEMPLATES[rule_id]
 
-    #Check idempotency using comment-aware logic
     if template.get("check_already_patched") and template["check_already_patched"](file_content):
         return True, f"File {file_path_rel} is already compliant. No patch required."
 
-    #Zero-trust backup creation
     try:
         backup_path = create_backup(file_path)
     except RuntimeError as e:
         return False, str(e)
 
     lines = file_content.splitlines(keepends=True)
-    start_line_idx = max(0, line_range[0] - 1)
-    end_line_idx = min(len(lines), line_range[1])
+    
+    # Fallback to full file if line_range is missing or invalid
+    if not line_range or len(line_range) < 2 or line_range == [0, 0]:
+        start_line_idx = 0
+        end_line_idx = len(lines)
+    else:
+        start_line_idx = max(0, line_range[0] - 1)
+        end_line_idx = min(len(lines), line_range[1])
 
     patch_applied = False
 
-    #Apply AST-targeted modification
     if "search_pattern" in template:
         pattern = re.compile(template["search_pattern"])
         for i in range(start_line_idx, end_line_idx):
@@ -110,7 +110,6 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
             os.remove(backup_path)
         return False, "Failed to locate mutable target line within AST range."
 
-    # Write back modified lines
     try:
         with open(file_path, 'w', encoding='utf-8') as f:
             f.writelines(lines)
@@ -118,10 +117,51 @@ def apply_patch(target_dir: str, file_path_rel: str, rule_id: str, line_range: l
         shutil.copy2(backup_path, file_path)
         return False, f"Failed to save patched file. Rolled back to backup. Error: {e}"
 
-    return True, str(backup_path)
+    return True, f"Successfully patched {rule_id}"
+
+
+def apply_patch_to_file(file_path: str, rule_id: str) -> Tuple[bool, str]:
+    ##Wrapper function to interface cleanly with main.py API endpoint calls.
+    path_obj = Path(file_path)
+    parent_dir = str(path_obj.parent)
+    file_name = path_obj.name
+    return apply_patch(parent_dir, file_name, rule_id, [0, 0])
+
+
+def apply_sequential_patches(findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    ##Line Drift Mitigation Engine: Sorts findings descending by LineNumber (bottom-to-top execution) to guarantee line index stability across sequential mutations.
+
+    sorted_findings = sorted(
+        findings, 
+        key=lambda f: f.get("LineNumber") or f.get("line_number") or 0, 
+        reverse=True
+    )
+
+    results = []
+    for finding in sorted_findings:
+        f_id = finding.get("FindingId") or finding.get("finding_id", "UNKNOWN")
+        f_path = finding.get("FilePath") or finding.get("file_path", "")
+        r_id = finding.get("RuleId") or finding.get("rule_id", "")
+        line_num = finding.get("LineNumber") or finding.get("line_number") or 0
+        
+        line_range = [line_num, line_num + 5] if line_num > 0 else [0, 0]
+
+        if not f_path or not os.path.exists(f_path):
+            results.append({"finding_id": f_id, "status": "FAILED", "reason": "File not found"})
+            continue
+
+        path_obj = Path(f_path)
+        success, msg = apply_patch(str(path_obj.parent), path_obj.name, r_id, line_range)
+        if success:
+            results.append({"finding_id": f_id, "status": "PATCHED", "details": msg})
+        else:
+            results.append({"finding_id": f_id, "status": "FAILED", "reason": msg})
+
+    return results
+
 
 def execute_rollback(target_dir: str, file_path_rel: str) -> dict:
-    ##Restores the orginal file from the backup
+    ##Restores the original file from the backup.
     base_dir = Path(target_dir).resolve()
     active_file = base_dir / file_path_rel
     backup_file = base_dir / f"{file_path_rel}.vanguard_backup"
@@ -129,13 +169,13 @@ def execute_rollback(target_dir: str, file_path_rel: str) -> dict:
     if not backup_file.exists():
         return {
             "status": "failed",
-             "message": f"No backup found for {file_path_rel}"
-             }
+            "message": f"No backup found for {file_path_rel}"
+        }
     try:
-        #overwrite the active patched file
         shutil.copy2(backup_file, active_file)
+        os.remove(backup_file)
 
-        return{
+        return {
             "status": "success",
             "message": f"Successfully rolled back {file_path_rel} to its original state"
         }
@@ -145,7 +185,6 @@ def execute_rollback(target_dir: str, file_path_rel: str) -> dict:
             "status": "error",
             "message": f"Rollback operation failed: {str(e)}"
         }
-
 
 
 if __name__ == "__main__":
