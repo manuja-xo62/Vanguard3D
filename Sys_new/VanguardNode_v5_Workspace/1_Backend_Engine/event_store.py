@@ -2,20 +2,20 @@ import sqlite3
 import datetime
 import uuid
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 DB_PATH = Path(__file__).parent / "vanguard.db"
 
 
 def get_db_connection():
-    ##Returns a SQLite connection object with row factory enabled
+    ##Returns a SQLite connection object with row factory enabled.
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db():
-    ##Initializes the database tables if they do not exist
+    ##Initializes the database tables if they do not exist.
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -25,6 +25,7 @@ def init_db():
         source TEXT,
         target_path TEXT,
         r_global REAL,
+        total_findings INTEGER DEFAULT 0,
         timestamp TEXT
     );
 
@@ -33,9 +34,13 @@ def init_db():
         scan_id TEXT REFERENCES scans(scan_id),
         file_path TEXT,
         rule_id TEXT,
+        rule_title TEXT,
         severity TEXT,
         resource_type TEXT,
-        r_file REAL,
+        line_number INTEGER DEFAULT 0,
+        code_snippet TEXT,
+        remediation_hint TEXT,
+        r_file REAL DEFAULT 0.0,
         status TEXT
     );
 
@@ -59,58 +64,117 @@ def init_db():
     conn.close()
 
 
-def record_scan(scan_id: str, source: str, target_path: str, r_global: float, files_data: List[Dict[str, Any]]):
-    ##logs new scan data into the tables
+def record_scan(
+    scan_id: str,
+    target_dir: str = "",
+    total_findings: int = 0,
+    findings: Optional[List[Dict[str, Any]]] = None,
+    source: str = "api",
+    target_path: str = "",
+    r_global: float = 0.0,
+    files_data: Optional[List[Dict[str, Any]]] = None
+):
+
+    ##Logs scan data into SQLite tables. Accommodates both direct finding lists and structured risk engine file records.
+
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
     now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
+    effective_target = target_dir or target_path
+    
+    # Handle direct findings payload vs Risk Engine files_data structure
+    raw_findings = findings if findings is not None else []
+    if files_data and not raw_findings:
+        for file_entry in files_data:
+            raw_findings.extend(file_entry.get("findings", []))
+
+    effective_total = total_findings if total_findings > 0 else len(raw_findings)
+
     cursor.execute(
-        "INSERT OR REPLACE INTO scans (scan_id, source, target_path, r_global, timestamp) VALUES (?, ?, ?, ?, ?)",
-        (scan_id, source, target_path, r_global, now_iso)
+        """
+        INSERT OR REPLACE INTO scans 
+        (scan_id, source, target_path, r_global, total_findings, timestamp) 
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (scan_id, source, effective_target, r_global, effective_total, now_iso)
     )
 
-    for file_entry in files_data:
-        r_file = file_entry.get("R_file", 0.0)
-        for f in file_entry.get("findings", []):
-            cursor.execute(
-                """
-                INSERT OR REPLACE INTO findings 
-                (finding_id, scan_id, file_path, rule_id, severity, resource_type, r_file, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    f.get("finding_id", f"fnd_{uuid.uuid4().hex[:8]}"),
-                    scan_id,
-                    f.get("file_path", ""),
-                    f.get("rule_id", ""),
-                    f.get("severity", "MEDIUM"),
-                    f.get("resource_type", "default"),
-                    r_file,
-                    f.get("status", "open")
-                )
+    for f in raw_findings:
+        f_id = f.get("FindingId") or f.get("finding_id") or f"fnd_{uuid.uuid4().hex[:8]}"
+        file_p = f.get("FilePath") or f.get("file_path", "")
+        r_id = f.get("RuleId") or f.get("rule_id", "UNKNOWN")
+        r_title = f.get("RuleTitle") or f.get("rule_title", "")
+        sev = f.get("Severity") or f.get("severity", "MEDIUM")
+        res_type = f.get("resource_type", "default")
+        line_num = f.get("LineNumber") or f.get("line_number", 0)
+        snippet = f.get("CodeSnippet") or f.get("code_snippet", "")
+        hint = f.get("RemediationHint") or f.get("remediation_hint", "")
+        stat = f.get("Status") or f.get("status", "VULNERABLE")
+
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO findings 
+            (finding_id, scan_id, file_path, rule_id, rule_title, severity, 
+             resource_type, line_number, code_snippet, remediation_hint, r_file, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                f_id,
+                scan_id,
+                file_p,
+                r_id,
+                r_title,
+                sev,
+                res_type,
+                line_num,
+                snippet,
+                hint,
+                0.0,
+                stat
             )
+        )
 
     conn.commit()
     conn.close()
 
 
+def get_all_scans() -> List[Dict[str, Any]]:
+    ##Retrieves all historical scan records from SQLite.
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT scan_id, source, target_path, total_findings, r_global, timestamp FROM scans ORDER BY timestamp DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_finding_by_id(finding_id: str) -> Optional[Dict[str, Any]]:
+    ##Retrieves a single finding by its ID for patching operations.
+    init_db()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM findings WHERE finding_id = ?", (finding_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
 def record_patch_event(finding_id: str, backup_path: str) -> str:
-    ## logs the successfully patched files
+    ##Logs successfully patched files.
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
     now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
     event_id = f"evt_{uuid.uuid4().hex[:8]}"
 
-    # Update finding status
     cursor.execute(
         "UPDATE findings SET status = 'patched' WHERE finding_id = ?",
         (finding_id,)
     )
 
-    # Record event log
     cursor.execute(
         "INSERT OR REPLACE INTO patch_events (event_id, finding_id, backup_path, timestamp) VALUES (?, ?, ?, ?)",
         (event_id, finding_id, backup_path, now_iso)
@@ -122,19 +186,13 @@ def record_patch_event(finding_id: str, backup_path: str) -> str:
 
 
 def get_scan_history() -> List[Dict[str, Any]]:
-    ##Retrieves past scans 
-    init_db()
-    conn = get_db_connection()
-    cursor = conn.cursor() 
-    
-    cursor.execute("SELECT scan_id, source, target_path, r_global, timestamp FROM scans ORDER BY timestamp DESC")
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+    ##Alias for get_all_scans for backward compatibility.
+    return get_all_scans()
 
-def get_scan_by_id(scan_id: str) -> dict:
+
+def get_scan_by_id(scan_id: str) -> Optional[Dict[str, Any]]:
+    ##Retrieves a scan and all of its associated findings.
     conn = get_db_connection()
-    conn.row_factory = sqlite3.Row  # Enables column access by name
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM scans WHERE scan_id = ?", (scan_id,))
@@ -153,7 +211,9 @@ def get_scan_by_id(scan_id: str) -> dict:
     conn.close()
     return scan_dict
 
+
 def get_replay_sequence(scan_id: str) -> List[Dict[str, Any]]:
+    ##Retrieves chronological patch events for a scan session.
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -163,21 +223,24 @@ def get_replay_sequence(scan_id: str) -> List[Dict[str, Any]]:
         JOIN findings f ON p.finding_id = f.finding_id
         WHERE f.scan_id = ?
         ORDER BY p.timestamp ASC
-    """, (scan_id, ))
+    """, (scan_id,))
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
 
+
 def record_training_attempt(scenario_id: str, score: int, time_taken: float) -> str:
+    ##Logs scenario scores for interactive exercises.
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
-    attempt_id = f"att_{uuid.uuid4(). hex[:8]}"
+    attempt_id = f"att_{uuid.uuid4().hex[:8]}"
     now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     cursor.execute(
         "INSERT INTO training_attempts (attempt_id, scenario_id, score, time_taken_seconds, timestamp) VALUES (?, ?, ?, ?, ?)",
-        (attempt_id, scenario_id, score, time_taken, now_iso) )
+        (attempt_id, scenario_id, score, time_taken, now_iso)
+    )
     conn.commit()
     conn.close()
     return attempt_id
@@ -188,23 +251,26 @@ if __name__ == "__main__":
     init_db()
     print("Database `vanguard.db` initialized successfully.")
     
-    # Simulate saving a scan from the Risk Engine with a dynamic finding ID
     test_scan_id = f"scan_{uuid.uuid4().hex[:8]}"
-    sample_files = [{
-        "file_path": "main.tf",
-        "R_file": 14.0,
-        "findings": [{
-            "finding_id": f"fnd_{uuid.uuid4().hex[:8]}",
-            "file_path": "main.tf",
-            "rule_id": "CKV_AWS_20",
-            "severity": "HIGH",
-            "resource_type": "aws_s3_bucket",
-            "status": "open"
-        }]
+    sample_findings = [{
+        "FindingId": f"fnd_{uuid.uuid4().hex[:8]}",
+        "FilePath": "main.tf",
+        "RuleId": "CKV_AWS_20",
+        "RuleTitle": "S3 Bucket Public Read",
+        "Severity": "HIGH",
+        "LineNumber": 12,
+        "CodeSnippet": "acl = 'public-read'",
+        "RemediationHint": "Set ACL to private",
+        "Status": "VULNERABLE"
     }]
     
-    record_scan(test_scan_id, "api", "../sample_repo", 14.0, sample_files)
+    record_scan(
+        scan_id=test_scan_id,
+        target_dir="../sample_repo",
+        total_findings=len(sample_findings),
+        findings=sample_findings
+    )
     print(f"Recorded test scan: {test_scan_id}")
     
-    history = get_scan_history()
+    history = get_all_scans()
     print(f"Total stored scans: {len(history)}")

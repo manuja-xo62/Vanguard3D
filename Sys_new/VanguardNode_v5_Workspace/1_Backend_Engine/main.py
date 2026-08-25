@@ -1,162 +1,159 @@
-import uuid
-from pathlib import Path
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Response
-from fastapi.middleware.cors import CORSMiddleware
+import os
+import shutil
+from typing import List, Optional
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import uvicorn
 
-#importing validated modules from other scripts
+# Internal module imports
 from checkov_parser import run_checkov_scan
-from risk_engine import calculate_risk
-from patch_service import apply_patch
-from event_store import (
-    record_scan, record_patch_event, get_scan_history,
-    get_scan_by_id, get_replay_sequence, record_training_attempt, init_db)
-from report_generator import generate_pdf_report
-from patch_service import execute_rollback
+from patch_service import apply_patch_to_file
+from event_store import init_db, record_scan, get_all_scans, get_finding_by_id
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    ##Ensure the database is initialzied when the server starts
+app = FastAPI(title="VanguardNode Backend Engine", version="2.2.0")
+
+# Initialize SQLite database schemas on engine boot
+@app.on_event("startup")
+def startup_event():
     init_db()
-    yield
 
-app = FastAPI(title = "VanguardNode API", version = "5.0", description="Zero Trust Backend Engine", lifespan=lifespan)
+# --- Pydantic API Request Schemas ---
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-#pydantic models for input validation
 class ScanRequest(BaseModel):
     target_directory: str = "../sample_repo"
 
-class RollbackRequest(BaseModel):
-    target_directory: str
-    file_path_rel: str
-
 class PatchRequest(BaseModel):
-    file_path_rel: str
-    rule_id: str
-    line_range: list
-    target_directory: str = "../sample_repo"
     finding_id: str
 
-class TrainingScoreRequest(BaseModel):
-    scenario_id: str
-    score: int
-    time_taken_seconds: float
+class SequentialPatchRequest(BaseModel):
+    findings: List[dict]
 
-#API endpoints
+class RollbackRequest(BaseModel):
+    finding_id: str
+    target_file: str
+
+
+# --- API Endpoints ---
+
+@app.get("/")
+def health_check():
+    """Diagnostic health check for UE4 Settings & Diagnostics Screen."""
+    return {"status": "ONLINE", "service": "VanguardNode Engine", "version": "2.2.0"}
+
 
 @app.post("/api/scan")
-def trigger_scan(req: ScanRequest):
-    ##Execute the checkhov scan to calculate the risks and logs the event
+def trigger_scan(payload: ScanRequest):
+    """
+    Triggers Checkov scan against target directory and records session in SQLite.
+    Returns FVanguardScanPayload structured JSON to UE4.
+    """
+    if not os.path.exists(payload.target_directory):
+        raise HTTPException(status_code=400, detail=f"Target directory '{payload.target_directory}' does not exist.")
+
     try:
-        #Parsing
-        raw_findings = run_checkov_scan(req.target_directory)
-    
-        #Calculating Risks
-        risk_data = calculate_risk(raw_findings)
-
-        #Store the event in the DB
-        scan_id = f"scan_{uuid.uuid4().hex[:8]}"
-        record_scan(scan_id, "api", req.target_directory, risk_data["R_global"], risk_data["files"])
-
-        return {"status": "success", "scan_id": scan_id, "data": risk_data}
+        scan_payload = run_checkov_scan(payload.target_directory)
+        
+        # Persist scan results in SQLite database for Archive mode
+        record_scan(
+            scan_id=scan_payload.get("ScanId"),
+            target_dir=payload.target_directory,
+            total_findings=scan_payload.get("TotalFindings", 0),
+            findings=scan_payload.get("Findings", [])
+        )
+        
+        return scan_payload
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Scan execution failed: {str(e)}")
+
 
 @app.post("/api/patch")
-def trigger_patch(req: PatchRequest):
-    ##Execute the AST guided patch and records the event int the DB
+def apply_single_patch(payload: PatchRequest):
+    """
+    Applies remediation patch for a single finding passed from UE4 Holo Slate UI.
+    Includes .vanguard_backup creation for zero-trust safety.
+    """
+    finding = get_finding_by_id(payload.finding_id)
+    if not finding:
+        raise HTTPException(status_code=404, detail=f"Finding ID '{payload.finding_id}' not found in event store.")
 
-    success, msg = apply_patch(
-        req.target_directory,
-        req.file_path_rel,
-        req.rule_id,
-        req.line_range,
-    )
-    if success:
-        if "already compliant" in msg:
-            return{"status": "skipped", "message": msg}
-        
-        #log the patch event in the DB
-        event_id = record_patch_event(req.finding_id, msg)
-        return {"status": "patched", "event_id": event_id, "backup_path": msg}
-    else:
-        raise HTTPException(status_code=400, detail=msg)
+    target_file = finding.get("file_path")
+    rule_id = finding.get("rule_id")
 
-@app.get("/api/scan/{scan_id}")
-def get_scan(scan_id: str):
-    ##retreive the scan history for replay mode
-    scan = get_scan_by_id(scan_id)
-    if not scan:
-        raise HTTPException(status_code=404, detail="ScanID not found")
-    return scan
+    if not os.path.exists(target_file):
+        raise HTTPException(status_code=404, detail=f"Target file '{target_file}' not found on disk.")
 
-@app.get("/api/events")
-def list_events():
-    return get_scan_history()
+    # Create backup before mutation if it doesn't already exist
+    backup_file = f"{target_file}.vanguard_backup"
+    if not os.path.exists(backup_file):
+        try:
+            shutil.copyfile(target_file, backup_file)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create zero-trust backup: {str(e)}")
 
-@app.get("/api/events/{scan_id}/replay")
-def get_replay(scan_id: str):
-    return get_replay_sequence(scan_id)
+    # Execute patch
+    patch_success, message = apply_patch_to_file(target_file, rule_id)
+    if not patch_success:
+        raise HTTPException(status_code=400, detail=message)
 
-@app.get("/api/training/scenarios")
-def list_training_scenarios():
-    scenarios_dir = Path(__file__).parent / "training_scenarios"
-    if not scenarios_dir.exists():
-        return []
-    scenarios = []
-    for item in scenarios_dir.iterdir():
-        if item.is_dir():
-            scenarios.append({"id": item.name, "name": item.name.replace("_", " ").title(), "path": str(item)})
-    return scenarios
+    return {"status": "success", "message": f"Patch for {payload.finding_id} applied successfully.", "file": target_file}
 
-@app.post("/api/training/score")
-def submit_score(req: TrainingScoreRequest):
-    ##Record the training score in the DB
-    attempt_id = record_training_attempt(req.scenario_id, req.score, req.time_taken_seconds)
-    return {"status": "success", "attempt_id": attempt_id}
 
-@app.get("/api/report/{scan_id}")
-def download_pdf_report(scan_id: str):
-    try:
-        scan_data = get_scan_by_id(scan_id)
-        if not scan_data:
-            raise HTTPException(status_code=404, detail=f"ScanID '{scan_id}' not found in database.")
-        
-        pdf_bytes = generate_pdf_report(scan_data)
-        return Response(
-            content=pdf_bytes,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=vanguard_report_{scan_id}.pdf"}
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"PDF Error: {type(e).__name__} - {str(e)}")
-        
+@app.post("/api/patch_batch")
+def apply_patches_sorted(payload: SequentialPatchRequest):
+    """
+    Applies multiple patches sequentially.
+    Sorts modifications descending by line number (bottom-to-top) to eliminate line drift.
+    """
+    # Sort findings in descending order by line number to protect index alignment
+    sorted_findings = sorted(payload.findings, key=lambda x: x.get('LineNumber', 0), reverse=True)
+    applied_results = []
+
+    for finding in sorted_findings:
+        target_file = finding.get('FilePath')
+        rule_id = finding.get('RuleId')
+        finding_id = finding.get('FindingId')
+
+        if target_file and os.path.exists(target_file):
+            backup_file = f"{target_file}.vanguard_backup"
+            if not os.path.exists(backup_file):
+                shutil.copyfile(target_file, backup_file)
+
+            success, msg = apply_patch_to_file(target_file, rule_id)
+            if success:
+                applied_results.append({"finding_id": finding_id, "status": "PATCHED"})
+            else:
+                applied_results.append({"finding_id": finding_id, "status": "FAILED", "reason": msg})
+
+    return {"status": "success", "applied": applied_results}
+
+
 @app.post("/api/rollback")
-def rollback_patch(req: RollbackRequest):
-    ##rollback the previous patch
+def rollback_patch(payload: RollbackRequest):
+    """
+    Reverts target file using its .vanguard_backup file.
+    Invoked by UE4 ExecuteRollback delegate.
+    """
+    original_file = payload.target_file
+    backup_file = f"{original_file}.vanguard_backup"
 
-    result = execute_rollback(req.target_directory, req.file_path_rel)
+    if not os.path.exists(backup_file):
+        raise HTTPException(status_code=404, detail=f"No backup file found for '{original_file}'.")
 
-    if result["status"] == "failed":
-        raise HTTPException(status_code=404, detail=result["message"])
-    elif result["status"] == "error":
-        raise HTTPException(status_code=500, detail=result["message"])
+    try:
+        shutil.copyfile(backup_file, original_file)
+        os.remove(backup_file)
+        return {"status": "success", "message": f"Successfully reverted {original_file}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rollback failed: {str(e)}")
 
-    return result
-     
 
-if __name__ == "__main__":
-    print("--- Starting Vanguard API on Port 8000---")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.get("/api/history")
+def get_scan_history():
+    """
+    Retrieves historical scan records from SQLite database.
+    Populates UI data grid in WBP_ArchivePanel.
+    """
+    try:
+        history = get_all_scans()
+        return {"status": "success", "history": history}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve scan history: {str(e)}")
