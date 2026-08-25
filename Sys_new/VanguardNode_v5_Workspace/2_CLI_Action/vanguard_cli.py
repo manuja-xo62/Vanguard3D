@@ -1,5 +1,3 @@
-from fastapi import Request
-from os import eventfd_read
 import argparse
 import sys
 import json
@@ -9,20 +7,20 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-#adding the backend to a sys.path so it doens't depend on the network
+# Adding the backend to sys.path so it doesn't depend on network environment
 backend_path = Path(__file__).parent.parent / "1_Backend_Engine"
 sys.path.append(str(backend_path.resolve()))
 
 try:
-    from checkov_parser import run_checkov_scan #type: ignore
-    from risk_engine import calculate_risk #type: ignore
-    from event_store import record_scan, init_db #type: ignore
+    from checkov_parser import run_checkov_scan  # type: ignore
+    from risk_engine import calculate_risk  # type: ignore
+    from event_store import record_scan, init_db  # type: ignore
 except ImportError as e:
-    print(f"FATAL: Could not load backend modules. Ensure 1_Backend_Engine exist alongside 2_CLI_Action. Error : {e}")
+    print(f"FATAL: Could not load backend modules. Ensure 1_Backend_Engine exists alongside 2_CLI_Action. Error: {e}")
     sys.exit(1)
 
 def run_scan(target: str, output_json: bool):
-    ##Run the scan and logs it in DB
+    """Runs the scan and logs it in the SQLite database."""
     init_db()
 
     target_path = Path(target).resolve()
@@ -34,23 +32,30 @@ def run_scan(target: str, output_json: bool):
         print(f"--- Vanguard CLI : Scanning {target_path} ---")
     
     try:
-        #parshing ASt
+        # Parsing AST & calculating risk
         raw_findings = run_checkov_scan(str(target_path))
         risk_data = calculate_risk(raw_findings)
 
-        #filter the backup files from final result
+        # Filter backup files from final result
         risk_data["files"] = [f for f in risk_data["files"] if not f.get("file_path", "").endswith(".vanguard_backup")]
         
-        #log the event in the DB
-        scan_id = f"clu_{uuid.uuid4(). hex[:8]}"
-        record_scan(scan_id, "cli", str(target_path), risk_data["R_global"], risk_data["files"])
+        # Log the scan event in DB using explicit keyword arguments
+        scan_id = f"cli_{uuid.uuid4().hex[:8]}"
+        record_scan(
+            scan_id=scan_id,
+            target_dir=str(target_path),
+            mode="cli",
+            source="cli",
+            r_global=risk_data["R_global"],
+            files_data=risk_data["files"]
+        )
 
-        #Output Results
+        # Output Results
         if output_json:
-            #machineredable output for GitHub Actions / CI
+            # Machine-readable output for GitHub Actions / CI
             print(json.dumps({"scan_id": scan_id, "data": risk_data}, indent=2))
         else:
-            #human readable output
+            # Human-readable output
             print(f"\n[+] Scan Complete. ID: {scan_id}")
             print(f"[+] Global Risk Score (R_global): {risk_data['R_global']:.2f}")
             print(f"[+] Files Processed: {len(risk_data['files'])}")
@@ -65,16 +70,16 @@ def run_scan(target: str, output_json: bool):
         sys.exit(1)
 
 def post_pr_comment(results_path: str):
-    ##Formats scan JSOn into a Markdown and post it to GitHub PR via Rest Api
+    """Formats scan JSON into Markdown and posts it to GitHub PR via REST API."""
     token = os.environ.get("GITHUB_TOKEN")
     repo = os.environ.get("GITHUB_REPOSITORY")
     event_path = os.environ.get("GITHUB_EVENT_PATH")
 
     if not token or not repo or not event_path:
-        print("Error: Missing required environement vriables (GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_EVENT_PATH)")
+        print("Error: Missing required environment variables (GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_EVENT_PATH)")
         sys.exit(1)
-    #Extracting PR number from the payload
 
+    # Extracting PR number from the event payload
     try:
         with open(event_path, "r") as f:
             event_data = json.load(f)
@@ -87,7 +92,7 @@ def post_pr_comment(results_path: str):
         print("Not a pull request event. Skipping comment posting.")
         return
     
-    #Read scan results JSON
+    # Read scan results JSON
     with open(results_path, "r") as f:
         scan_payload = json.load(f)
     
@@ -95,21 +100,21 @@ def post_pr_comment(results_path: str):
     r_global = data.get("R_global", 0.0)
     files = data.get("files", [])
 
-    #format markdown comment
-    comment_body = f"## 🛡️ Vanguard Security Report \n\n"
-    comment_body += f"**Global Risk Score ($R_{{global}}):** `{r_global:.2f}`\n\n"
-    comment_body += "| File Path | Risk Score ($R_{{file}} | Findings Count |\n"
+    # Format markdown comment
+    comment_body = "## 🛡️ Vanguard Security Report \n\n"
+    comment_body += f"**Global Risk Score (R_global):** `{r_global:.2f}`\n\n"
+    comment_body += "| File Path | Risk Score (R_file) | Findings Count |\n"
     comment_body += "| --- | --- | --- | \n"
 
     for file_info in files:
-        path = file_info.get('file', 'Unknown File')
+        path = file_info.get('file_path') or file_info.get('file', 'Unknown File')
         r_file = file_info.get('R_file', 0.0)
         findings_count = len(file_info.get('findings', []))
         comment_body += f"| `{path}` | `{r_file:.2f}` | {findings_count} |\n"
     
     comment_body += "\n*Generated By VanguardNode 3D Automated CI Scanner*"
     
-    #Post comment to GitHub REST API
+    # Post comment to GitHub REST API
     url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
     headers = {
         "Authorization": f"token {token}",
@@ -120,14 +125,14 @@ def post_pr_comment(results_path: str):
     
     try:
         with urllib.request.urlopen(req) as resp:
-            if resp.status in (200,201):
+            if resp.status in (200, 201):
                 print(f"[+] Comment posted successfully to {repo} PR #{pr_number}")
     except urllib.error.HTTPError as e:
-        print(f"HTTP Error posting comment to GutHub: {e.code} {e.read().decode()}")
+        print(f"HTTP Error posting comment to GitHub: {e.code} {e.read().decode()}")
         sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description="VanguardNode CLI - Zero-Trust DecSecOps Scanner")
+    parser = argparse.ArgumentParser(description="VanguardNode CLI - Zero-Trust DevSecOps Scanner")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # scan command
@@ -145,7 +150,6 @@ def main():
         run_scan(args.path, args.json)
     elif args.command == "comment-pr":
         post_pr_comment(args.results)
-
 
 if __name__ == "__main__":
     main()
