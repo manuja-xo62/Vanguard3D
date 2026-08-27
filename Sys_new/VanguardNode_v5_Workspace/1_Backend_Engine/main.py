@@ -5,7 +5,7 @@ import io
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from event_store import (
     init_db, record_scan, get_scan_by_id, get_replay_sequence,
@@ -31,8 +31,7 @@ class FindingModel(BaseModel):
     status: str
     rFile: float = Field(0.0, alias="r_file")
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class PatchRequest(BaseModel):
@@ -41,17 +40,14 @@ class PatchRequest(BaseModel):
     targetDir: Optional[str] = Field(None, alias="target_dir")
     filePath: Optional[str] = Field(None, alias="file_path")
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class BatchPatchRequest(BaseModel):
     targetDir: Optional[str] = Field(None, alias="target_dir")
     patches: List[PatchRequest]
 
-    class Config:
-        populate_by_name = True
-
+    model_config = ConfigDict(populate_by_name=True)
 
 class RollbackRequest(BaseModel):
     targetDir: Optional[str] = Field(None, alias="target_dir")
@@ -59,8 +55,7 @@ class RollbackRequest(BaseModel):
     filePath: Optional[str] = Field(None, alias="file_path")
     target_file: Optional[str] = None
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class TrainingScoreRequest(BaseModel):
@@ -73,8 +68,7 @@ class ScanRequest(BaseModel):
     target_directory: Optional[str] = Field(None, alias="target_dir")
     target_dir: Optional[str] = None
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
     def resolved_target_dir(self) -> str:
         return self.target_directory or self.target_dir or ""
