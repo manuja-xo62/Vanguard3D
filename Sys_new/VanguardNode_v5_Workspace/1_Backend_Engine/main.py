@@ -101,36 +101,36 @@ async def execute_scan(req: Optional[ScanRequest] = None, target_dir: Optional[s
     flat_findings = []
     for file_entry in risk_data.get("files", []):
         for finding in file_entry.get("findings", []):
-            # Normalize all keys to snake_case, camelCase, and PascalCase for compatibility
-            finding["finding_id"] = finding.get("FindingId") or finding.get("finding_id")
-            finding["findingId"] = finding["finding_id"]
-            
-            finding["file_path"] = finding.get("FilePath") or finding.get("file_path")
-            finding["filePath"] = finding["file_path"]
+            f_id = finding.get("FindingId") or finding.get("finding_id")
+            f_path = finding.get("FilePath") or finding.get("file_path")
+            r_id = finding.get("RuleId") or finding.get("rule_id")
+            r_title = finding.get("RuleTitle") or finding.get("rule_title", "")
+            sev = (finding.get("Severity") or finding.get("severity") or "MEDIUM").upper()
+            line_num = finding.get("LineNumber") or finding.get("line_number", 0)
+            snippet = finding.get("CodeSnippet") or finding.get("code_snippet", "")
+            hint = finding.get("RemediationHint") or finding.get("remediation_hint", "")
 
-            finding["rule_id"] = finding.get("RuleId") or finding.get("rule_id")
-            finding["ruleId"] = finding["rule_id"]
-
-            finding["rule_title"] = finding.get("RuleTitle") or finding.get("rule_title", "")
-            finding["ruleTitle"] = finding["rule_title"]
-
-            finding["severity"] = finding.get("Severity") or finding.get("severity", "MEDIUM")
-
-            finding["line_number"] = finding.get("LineNumber") or finding.get("line_number", 0)
-            finding["lineNumber"] = finding["line_number"]
-
-            finding["status"] = finding.get("Status") or finding.get("status", "VULNERABLE")
-
-            finding["code_snippet"] = finding.get("CodeSnippet") or finding.get("code_snippet", "")
-            finding["codeSnippet"] = finding["code_snippet"]
-
-            finding["remediation_hint"] = finding.get("RemediationHint") or finding.get("remediation_hint", "")
-            finding["remediationHint"] = finding["remediation_hint"]
-
-            flat_findings.append(finding)
-
-    if not flat_findings and raw_scan.get("Findings"):
-        flat_findings = raw_scan.get("Findings", [])
+            flat_findings.append({
+                "findingId": f_id,
+                "finding_id": f_id,
+                "filePath": f_path,
+                "file_path": f_path,
+                "ruleId": r_id,
+                "rule_id": r_id,
+                "ruleTitle": r_title,
+                "rule_title": r_title,
+                "severity": sev,
+                "lineNumber": line_num,
+                "line_number": line_num,
+                "status": finding.get("Status") or finding.get("status", "VULNERABLE"),
+                "codeSnippet": snippet,
+                "code_snippet": snippet,
+                "remediationHint": hint,
+                "remediation_hint": hint,
+                "computed_score": finding.get("computed_score", 0),
+                "exposure": finding.get("exposure", "internal_only"),
+                "r_file": finding.get("r_file", 0.0)
+            })
 
     record_scan(
         scan_id=scan_id,
@@ -144,11 +144,8 @@ async def execute_scan(req: Optional[ScanRequest] = None, target_dir: Optional[s
     )
 
     payload = {
-        "ScanId": scan_id,
         "scanId": scan_id,
-        "TotalFindings": len(flat_findings),
         "totalFindings": len(flat_findings),
-        "Findings": flat_findings,
         "findings": flat_findings
     }
     
