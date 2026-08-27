@@ -23,11 +23,14 @@ def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[st
     else:
         code_snippet_str = str(code_block)
 
+    raw_sev = raw_check.get("severity")
+    severity = str(raw_sev).capitalize() if raw_sev and str(raw_sev).lower() != "none" else "Medium"
+
     return {
         "FindingId": f"fnd_{uuid.uuid4().hex[:8]}",
         "RuleId": str(raw_check.get("check_id", "UNKNOWN_RULE")),
         "RuleTitle": str(raw_check.get("check_name", "Unspecified Configuration Issue")),
-        "Severity": str(raw_check.get("severity", "HIGH")).capitalize(),
+        "Severity": severity,
         "FilePath": rel_path,
         "LineNumber": int(line_num),
         "Status": "VULNERABLE",

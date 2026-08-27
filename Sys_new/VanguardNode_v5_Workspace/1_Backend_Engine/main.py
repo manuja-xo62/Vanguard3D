@@ -2,6 +2,7 @@ import os
 import json
 import asyncio
 import io
+import uvicorn
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -28,7 +29,11 @@ class FindingModel(BaseModel):
     filePath: str = Field(..., alias="file_path")
     lineNumber: int = Field(..., alias="line_number")
     ruleId: str = Field(..., alias="rule_id")
-    status: str
+    ruleTitle: Optional[str] = Field("", alias="rule_title")
+    severity: Optional[str] = Field("MEDIUM", alias="severity")
+    status: str = Field("VULNERABLE", alias="status")
+    codeSnippet: Optional[str] = Field("", alias="code_snippet")
+    remediationHint: Optional[str] = Field("", alias="remediation_hint")
     rFile: float = Field(0.0, alias="r_file")
 
     model_config = ConfigDict(populate_by_name=True)
@@ -71,12 +76,16 @@ class ScanRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     def resolved_target_dir(self) -> str:
-        return self.target_directory or self.target_dir or ""
+        path = self.target_directory or self.target_dir or ""
+        return "" if path.strip().lower() in ("", "string") else path.strip()
 
 
 @app.post("/api/scan")
-async def execute_scan(req: ScanRequest, target_dir: Optional[str] = None):
-    effective_dir = req.resolved_target_dir() or target_dir or ""
+async def execute_scan(req: Optional[ScanRequest] = None, target_dir: Optional[str] = None):
+    query_dir = target_dir.strip() if (target_dir and target_dir.strip().lower() != "string") else ""
+    body_dir = req.resolved_target_dir() if req else ""
+    
+    effective_dir = query_dir or body_dir
     
     if not effective_dir:
         raise HTTPException(status_code=400, detail="Target directory must be provided in request body or query param")
@@ -89,10 +98,35 @@ async def execute_scan(req: ScanRequest, target_dir: Optional[str] = None):
 
     scan_id = raw_scan.get("ScanId", f"scan_{os.urandom(4).hex()}")
 
-    # Flatten findings across all file results while embedding computed risk scores
     flat_findings = []
     for file_entry in risk_data.get("files", []):
         for finding in file_entry.get("findings", []):
+            # Normalize all keys to snake_case, camelCase, and PascalCase for compatibility
+            finding["finding_id"] = finding.get("FindingId") or finding.get("finding_id")
+            finding["findingId"] = finding["finding_id"]
+            
+            finding["file_path"] = finding.get("FilePath") or finding.get("file_path")
+            finding["filePath"] = finding["file_path"]
+
+            finding["rule_id"] = finding.get("RuleId") or finding.get("rule_id")
+            finding["ruleId"] = finding["rule_id"]
+
+            finding["rule_title"] = finding.get("RuleTitle") or finding.get("rule_title", "")
+            finding["ruleTitle"] = finding["rule_title"]
+
+            finding["severity"] = finding.get("Severity") or finding.get("severity", "MEDIUM")
+
+            finding["line_number"] = finding.get("LineNumber") or finding.get("line_number", 0)
+            finding["lineNumber"] = finding["line_number"]
+
+            finding["status"] = finding.get("Status") or finding.get("status", "VULNERABLE")
+
+            finding["code_snippet"] = finding.get("CodeSnippet") or finding.get("code_snippet", "")
+            finding["codeSnippet"] = finding["code_snippet"]
+
+            finding["remediation_hint"] = finding.get("RemediationHint") or finding.get("remediation_hint", "")
+            finding["remediationHint"] = finding["remediation_hint"]
+
             flat_findings.append(finding)
 
     if not flat_findings and raw_scan.get("Findings"):
@@ -109,11 +143,13 @@ async def execute_scan(req: ScanRequest, target_dir: Optional[str] = None):
         files_data=risk_data.get("files", [])
     )
 
-    # Payload matching C++ FVanguardScanPayload structure
     payload = {
         "ScanId": scan_id,
+        "scanId": scan_id,
         "TotalFindings": len(flat_findings),
-        "Findings": flat_findings
+        "totalFindings": len(flat_findings),
+        "Findings": flat_findings,
+        "findings": flat_findings
     }
     
     await event_queue.put({"event": "NEW_SCAN", "data": payload})
@@ -295,3 +331,4 @@ async def stream_events(request: Request):
                 yield ": keepalive\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
