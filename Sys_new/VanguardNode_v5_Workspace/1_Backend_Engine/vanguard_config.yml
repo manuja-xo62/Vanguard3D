@@ -69,3 +69,431 @@ remediation_templates:
     search_pattern: 'apt-get\s+install\s+(?!.*--no-install-recommends)(-y\s+)?([a-zA-Z0-9\-_\s]+)'
     patch_text: 'apt-get install --no-install-recommends \1\2 # [VANGUARD NANO-PATCH APPLIED]'
     type: "replace"
+
+    # ==========================================
+  # AWS - S3 & STORAGE
+  # ==========================================
+  CKV_AWS_53:
+    search_pattern: 'block_public_acls\s*=\s*false'
+    patch_text: 'block_public_acls = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_54:
+    search_pattern: 'block_public_policy\s*=\s*false'
+    patch_text: 'block_public_policy = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_55:
+    search_pattern: 'ignore_public_acls\s*=\s*false'
+    patch_text: 'ignore_public_acls = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_56:
+    search_pattern: 'restrict_public_buckets\s*=\s*false'
+    patch_text: 'restrict_public_buckets = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_3:
+    search_pattern: 'encrypted\s*=\s*false'
+    patch_text: 'encrypted = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_135:
+    search_pattern: 'encrypted\s*=\s*false'
+    patch_text: 'encrypted = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_171:
+    search_pattern: 'encrypted\s*=\s*false'
+    patch_text: 'encrypted = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+
+  # ==========================================
+  # AWS - COMPUTE & NETWORKING
+  # ==========================================
+  CKV_AWS_16:
+    search_pattern: 'monitoring\s*=\s*false'
+    patch_text: 'monitoring = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_79:
+    search_pattern: 'http_tokens\s*=\s*"optional"'
+    patch_text: 'http_tokens = "required" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_88:
+    search_pattern: 'associate_public_ip_address\s*=\s*true'
+    patch_text: 'associate_public_ip_address = false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_131:
+    search_pattern: 'drop_invalid_header_fields\s*=\s*false'
+    patch_text: 'drop_invalid_header_fields = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_148:
+    search_pattern: 'internal\s*=\s*false'
+    patch_text: 'internal = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_61:
+    search_pattern: 'endpoint_public_access\s*=\s*true'
+    patch_text: 'endpoint_public_access = false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_62:
+    search_pattern: 'endpoint_private_access\s*=\s*false'
+    patch_text: 'endpoint_private_access = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_130:
+    search_pattern: 'disable_execute_api_endpoint\s*=\s*false'
+    patch_text: 'disable_execute_api_endpoint = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+
+  # ==========================================
+  # AWS - IAM & SECRETS
+  # ==========================================
+  CKV_AWS_41:
+    search_pattern: 'require_uppercase_characters\s*=\s*false'
+    patch_text: 'require_uppercase_characters = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_42:
+    search_pattern: 'require_lowercase_characters\s*=\s*false'
+    patch_text: 'require_lowercase_characters = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_43:
+    search_pattern: 'require_numbers\s*=\s*false'
+    patch_text: 'require_numbers = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_44:
+    search_pattern: 'require_symbols\s*=\s*false'
+    patch_text: 'require_symbols = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_65:
+    search_pattern: 'enable_key_rotation\s*=\s*false'
+    patch_text: 'enable_key_rotation = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_163:
+    search_pattern: 'scan_on_push\s*=\s*false'
+    patch_text: 'scan_on_push = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_51:
+    search_pattern: 'mutability\s*=\s*"MUTABLE"'
+    patch_text: 'mutability = "IMMUTABLE" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  
+  # ==========================================
+  # AWS - DATABASES (RDS, DYNAMO, ES)
+  # ==========================================
+  CKV_AWS_28:
+    search_pattern: 'enabled\s*=\s*false'
+    patch_text: 'enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_74:
+    search_pattern: 'enabled\s*=\s*false'
+    patch_text: 'enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_83:
+    search_pattern: 'enabled\s*=\s*false'
+    patch_text: 'enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_84:
+    search_pattern: 'node_to_node_encryption\s*=\s*false'
+    patch_text: 'node_to_node_encryption = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_92:
+    search_pattern: 'stream_enabled\s*=\s*false'
+    patch_text: 'stream_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_96:
+    search_pattern: 'storage_encrypted\s*=\s*false'
+    patch_text: 'storage_encrypted = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_98:
+    search_pattern: 'auto_minor_version_upgrade\s*=\s*false'
+    patch_text: 'auto_minor_version_upgrade = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_136:
+    search_pattern: 'encrypted\s*=\s*false'
+    patch_text: 'encrypted = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_150:
+    search_pattern: 'deletion_protection\s*=\s*false'
+    patch_text: 'deletion_protection = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_157:
+    search_pattern: 'multi_az\s*=\s*false'
+    patch_text: 'multi_az = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_161:
+    search_pattern: 'iam_database_authentication_enabled\s*=\s*false'
+    patch_text: 'iam_database_authentication_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_226:
+    search_pattern: 'server_side_encryption\s*=\s*false'
+    patch_text: 'server_side_encryption = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_272:
+    search_pattern: 'retention_period\s*=\s*0'
+    patch_text: 'retention_period = 7 # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+
+  # ==========================================
+  # AWS - LOGGING, QUEUES, & MISC
+  # ==========================================
+  CKV_AWS_89:
+    search_pattern: 'enable_log_file_validation\s*=\s*false'
+    patch_text: 'enable_log_file_validation = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_90:
+    search_pattern: 'is_multi_region_trail\s*=\s*false'
+    patch_text: 'is_multi_region_trail = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_118:
+    search_pattern: 'xray_tracing_enabled\s*=\s*false'
+    patch_text: 'xray_tracing_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_172:
+    search_pattern: 'kms_master_key_id\s*=\s*""'
+    patch_text: 'kms_master_key_id = "alias/aws/sns" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_173:
+    search_pattern: 'kms_master_key_id\s*=\s*""'
+    patch_text: 'kms_master_key_id = "alias/aws/sqs" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_225:
+    search_pattern: 'cache_data_encrypted\s*=\s*false'
+    patch_text: 'cache_data_encrypted = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_227:
+    search_pattern: 'xray_enabled\s*=\s*false'
+    patch_text: 'xray_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_233:
+    search_pattern: 'encryption_key\s*=\s*""'
+    patch_text: 'encryption_key = "alias/aws/s3" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_273:
+    search_pattern: 'encrypted\s*=\s*false'
+    patch_text: 'encrypted = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_283:
+    search_pattern: 'root_access\s*=\s*"Enabled"'
+    patch_text: 'root_access = "Disabled" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_311:
+    search_pattern: 'status\s*=\s*"PAUSED"'
+    patch_text: 'status = "ENABLED" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_338:
+    search_pattern: 'retention_in_days\s*=\s*0'
+    patch_text: 'retention_in_days = 365 # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_132:
+    search_pattern: 'privileged_mode\s*=\s*true'
+    patch_text: 'privileged_mode = false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AWS_165:
+    search_pattern: 'direct_internet_access\s*=\s*"Enabled"'
+    patch_text: 'direct_internet_access = "Disabled" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+
+  # ==========================================
+  # AZURE - CORE & NETWORKING
+  # ==========================================
+  CKV_AZURE_3:
+    search_pattern: 'enable_https_traffic_only\s*=\s*false'
+    patch_text: 'enable_https_traffic_only = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_9:
+    search_pattern: 'enable_rbac\s*=\s*false'
+    patch_text: 'enable_rbac = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_14:
+    search_pattern: 'min_tls_version\s*=\s*"TLS1_0"'
+    patch_text: 'min_tls_version = "TLS1_2" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_33:
+    search_pattern: 'logging\s*=\s*false'
+    patch_text: 'logging = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_35:
+    search_pattern: 'default_action\s*=\s*"Allow"'
+    patch_text: 'default_action = "Deny" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_43:
+    search_pattern: 'enable_soft_delete\s*=\s*false'
+    patch_text: 'enable_soft_delete = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_44:
+    search_pattern: 'min_tls_version\s*=\s*"1\.1"'
+    patch_text: 'min_tls_version = "1.2" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_56:
+    search_pattern: 'ssl_enforcement_enabled\s*=\s*false'
+    patch_text: 'ssl_enforcement_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_59:
+    search_pattern: 'enable_non_ssl_port\s*=\s*true'
+    patch_text: 'enable_non_ssl_port = false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_63:
+    search_pattern: 'http2_enabled\s*=\s*false'
+    patch_text: 'http2_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_65:
+    search_pattern: 'http2_enabled\s*=\s*false'
+    patch_text: 'http2_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_66:
+    search_pattern: 'https_only\s*=\s*false'
+    patch_text: 'https_only = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_71:
+    search_pattern: 'client_cert_enabled\s*=\s*false'
+    patch_text: 'client_cert_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_78:
+    search_pattern: 'role_based_access_control_enabled\s*=\s*false'
+    patch_text: 'role_based_access_control_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_97:
+    search_pattern: 'log_checkpoints\s*=\s*"off"'
+    patch_text: 'log_checkpoints = "on" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_98:
+    search_pattern: 'log_connections\s*=\s*"off"'
+    patch_text: 'log_connections = "on" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_99:
+    search_pattern: 'log_disconnections\s*=\s*"off"'
+    patch_text: 'log_disconnections = "on" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_109:
+    search_pattern: 'purge_protection_enabled\s*=\s*false'
+    patch_text: 'purge_protection_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_113:
+    search_pattern: 'local_authentication_disabled\s*=\s*false'
+    patch_text: 'local_authentication_disabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_AZURE_190:
+    search_pattern: 'allow_nested_items_to_be_public\s*=\s*true'
+    patch_text: 'allow_nested_items_to_be_public = false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+
+  # ==========================================
+  # GCP (GOOGLE CLOUD PLATFORM)
+  # ==========================================
+  CKV_GCP_2:
+    search_pattern: 'enable_vtpm\s*=\s*false'
+    patch_text: 'enable_vtpm = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_3:
+    search_pattern: 'enable_integrity_monitoring\s*=\s*false'
+    patch_text: 'enable_integrity_monitoring = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_13:
+    search_pattern: 'require_ssl\s*=\s*false'
+    patch_text: 'require_ssl = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_14:
+    search_pattern: 'log_statement\s*=\s*"none"'
+    patch_text: 'log_statement = "all" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_29:
+    search_pattern: 'ipv4_enabled\s*=\s*true'
+    patch_text: 'ipv4_enabled = false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_38:
+    search_pattern: 'enable_secure_boot\s*=\s*false'
+    patch_text: 'enable_secure_boot = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_62:
+    search_pattern: 'uniform_bucket_level_access\s*=\s*false'
+    patch_text: 'uniform_bucket_level_access = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_66:
+    search_pattern: 'enabled\s*=\s*false'
+    patch_text: 'enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_75:
+    search_pattern: 'enable_legacy_abac\s*=\s*true'
+    patch_text: 'enable_legacy_abac = false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_78:
+    search_pattern: 'enabled\s*=\s*false'
+    patch_text: 'enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_83:
+    search_pattern: 'auto_repair\s*=\s*false'
+    patch_text: 'auto_repair = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_84:
+    search_pattern: 'auto_upgrade\s*=\s*false'
+    patch_text: 'auto_upgrade = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_93:
+    search_pattern: 'deletion_protection\s*=\s*false'
+    patch_text: 'deletion_protection = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_113:
+    search_pattern: 'auth_enabled\s*=\s*false'
+    patch_text: 'auth_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_GCP_106:
+    search_pattern: 'ingress_settings\s*=\s*"ALLOW_ALL"'
+    patch_text: 'ingress_settings = "ALLOW_INTERNAL_ONLY" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+
+  # ==========================================
+  # KUBERNETES MANIFESTS (YAML)
+  # ==========================================
+  CKV_K8S_11:
+    search_pattern: 'privileged:\s*true'
+    patch_text: 'privileged: false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_K8S_14:
+    search_pattern: 'runAsRoot:\s*true'
+    patch_text: 'runAsRoot: false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_K8S_16:
+    search_pattern: 'allowPrivilegeEscalation:\s*true'
+    patch_text: 'allowPrivilegeEscalation: false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_K8S_20:
+    search_pattern: 'readOnlyRootFilesystem:\s*false'
+    patch_text: 'readOnlyRootFilesystem: true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_K8S_22:
+    search_pattern: 'readOnlyRootFilesystem:\s*false'
+    patch_text: 'readOnlyRootFilesystem: true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_K8S_23:
+    search_pattern: 'runAsNonRoot:\s*false'
+    patch_text: 'runAsNonRoot: true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_K8S_25:
+    search_pattern: 'hostNetwork:\s*true'
+    patch_text: 'hostNetwork: false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_K8S_26:
+    search_pattern: 'hostPID:\s*true'
+    patch_text: 'hostPID: false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_K8S_27:
+    search_pattern: 'hostIPC:\s*true'
+    patch_text: 'hostIPC: false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_K8S_38:
+    search_pattern: 'automountServiceAccountToken:\s*true'
+    patch_text: 'automountServiceAccountToken: false # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+
+  # ==========================================
+  # DOCKERFILES
+  # ==========================================
+  CKV_DOCKER_1:
+    search_pattern: '^\s*EXPOSE\s+22'
+    patch_text: '# EXPOSE 22 # [VANGUARD NANO-PATCH APPLIED - PORT 22 BLOCKED]'
+    type: "replace"
+  CKV_DOCKER_5:
+    search_pattern: '^\s*MAINTAINER\s+(.*)'
+    patch_text: 'LABEL maintainer="\1" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_DOCKER_7:
+    search_pattern: '^\s*USER\s+root'
+    patch_text: 'USER vanguard_svc # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+  CKV_DOCKER_11:
+    search_pattern: '^\s*RUN\s+sudo\s+(.*)'
+    patch_text: 'RUN \1 # [VANGUARD NANO-PATCH APPLIED - SUDO REMOVED]'
+    type: "replace"
