@@ -40,10 +40,12 @@ class FindingModel(BaseModel):
 
 
 class PatchRequest(BaseModel):
-    findingId: str = Field(..., alias="finding_id")
+    findingId: Optional[str] = Field("", alias="finding_id")
     scanId: Optional[str] = Field(None, alias="scan_id")
     targetDir: Optional[str] = Field(None, alias="target_dir")
     filePath: Optional[str] = Field(None, alias="file_path")
+    ruleId: Optional[str] = Field(None, alias="rule_id")
+    lineNumber: Optional[int] = Field(0, alias="line_number")
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -202,29 +204,33 @@ async def stream_report(scan_id: str):
 
 @app.post("/api/patch")
 async def apply_single_patch(req: PatchRequest):
-    finding = get_finding_by_id(req.findingId)
+    # Try fetching finding from DB if finding_id is provided
+    finding = get_finding_by_id(req.findingId) if req.findingId else None
     
-    if not finding and not req.filePath:
-        raise HTTPException(status_code=404, detail=f"Finding '{req.findingId}' not found in database and no file path provided.")
-
-    rule_id = finding.get("rule_id", "") if finding else ""
-    line_num = finding.get("line_number", 0) if finding else 0
-
-    # Auto-resolve target file path if missing
+    # Resolve parameters from DB record first, fallback to incoming request fields
+    rule_id = (finding.get("rule_id") if finding else None) or req.ruleId or ""
+    line_num = (finding.get("line_number") if finding else None) or req.lineNumber or 0
     file_path = req.filePath or (finding.get("file_path") if finding else None)
+
     if not file_path:
         raise HTTPException(status_code=400, detail="Target file path could not be resolved from request or database.")
 
-    # Auto-resolve target directory via scan record if missing
+    # Resolve target directory
     target_dir = req.targetDir
-    if not target_dir:
-        scan_id = req.scanId or (finding.get("scan_id") if finding else None)
+    if not target_dir and finding:
+        scan_id = req.scanId or finding.get("scan_id")
         if scan_id:
             scan_data = get_scan_by_id(scan_id)
             if scan_data:
                 target_dir = scan_data.get("target_path")
+
+    # Fallback to the most recent scan directory if still unresolved
     if not target_dir:
-        target_dir = "."
+        all_scans = get_all_scans()
+        if all_scans:
+            target_dir = all_scans[0].get("target_path", ".")
+        else:
+            target_dir = "."
 
     success, msg = apply_patch(
         target_dir=target_dir,
@@ -237,7 +243,8 @@ async def apply_single_patch(req: PatchRequest):
         raise HTTPException(status_code=400, detail=msg)
 
     backup_path = f"{file_path}.vanguard_backup"
-    record_patch_event(req.findingId, backup_path)
+    if req.findingId:
+        record_patch_event(req.findingId, backup_path)
 
     await event_queue.put({"event": "PATCH_APPLIED", "findingId": req.findingId})
     return {"status": "SUCCESS", "message": msg}
