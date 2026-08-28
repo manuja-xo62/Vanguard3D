@@ -15,14 +15,19 @@ def load_config(config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
             "remediation_templates": {
                 "CKV_AWS_20": {
                     "search_pattern": r'acl\s*=\s*"public-read"',
-                    "patch_text": 'acl    = "private" # [VANGUARD NANO-PATCH APPLIED]',
+                     "patch_text": 'acl    = "private" # [VANGUARD NANO-PATCH APPLIED]',
                     "type": "replace"
-                },
+            },
+                "CKV_AWS_21": {
+                    "search_pattern": r'(resource\s+"aws_s3_bucket"\s+"[^"]+"\s*\{)',
+                    "patch_text": r'\1' + "\n  versioning {\n    enabled = true\n  } # [VANGUARD NANO-PATCH APPLIED]",
+                    "type": "replace"
+            },
                 "CKV_DOCKER_3": {
                     "action": "insert_user",
                     "patch_text": "USER vanguard_svc # [VANGUARD NANO-PATCH APPLIED]\n",
                     "type": "insert"
-                }
+            }
             }
         }
 

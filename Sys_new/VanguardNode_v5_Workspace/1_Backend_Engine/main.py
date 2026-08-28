@@ -304,11 +304,14 @@ async def apply_batch_patch(req: BatchPatchRequest):
 
 @app.post("/api/rollback")
 async def rollback_patch(req: RollbackRequest):
-    target_dir = req.targetDir or req.target_dir or "."
+    target_dir = req.targetDir or "."
     file_path = req.filePath or req.target_file
 
     if not file_path:
-        raise HTTPException(status_code=400, detail="Rollback failed: missing target file path ('filePath' or 'target_file')")
+        raise HTTPException(
+            status_code=400, 
+            detail="Rollback failed: missing target file path ('filePath' or 'target_file')"
+        )
 
     result = execute_rollback(target_dir, file_path)
     if result.get("status") != "success":

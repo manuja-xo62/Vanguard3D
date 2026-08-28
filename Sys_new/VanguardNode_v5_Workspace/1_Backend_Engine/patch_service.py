@@ -70,11 +70,7 @@ def apply_patch(
     template = get_remediation_template(rule_id)
     if not template:
         # Safer fallback: appends a manual review flag instead of destructive replacement
-        template = {
-            "search_pattern": r"(.*)",
-            "patch_text": r"\1 # [VANGUARD MANUAL REVIEW REQUIRED]",
-            "type": "replace"
-        }
+        return False, f"No remediation template configured for rule {rule_id}"
 
     try:
         with open(file_path, 'r', encoding='utf-8') as f:

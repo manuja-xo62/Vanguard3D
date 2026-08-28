@@ -20,25 +20,25 @@ criticality_weights:
   "**": 1.0
 
 remediation_templates:
-  CKV_AWS_20: 
-        "search_pattern": r'acl\s*=\s*"public-read"',
-        "patch_text": 'acl    = "private" # [VANGUARD NANO-PATCH APPLIED]',
-        "type": "replace"
+  CKV_AWS_20:
+    search_pattern: 'acl\s*=\s*"public-read"'
+    patch_text: 'acl    = "private" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
     
-  CKV_AWS_21: 
-        "search_pattern": r'(resource\s+"aws_s3_bucket"\s+"[^"]+"\s*\{)',
-        "patch_text": r'\1\n  versioning {\n    enabled = true\n  } # [VANGUARD NANO-PATCH APPLIED]',
-        "type": "replace"
+  CKV_AWS_21:
+    search_pattern: '(resource\s+"aws_s3_bucket"\s+"[^"]+"\s*\{)'
+    patch_text: "\\1\n  versioning {\n    enabled = true\n  } # [VANGUARD NANO-PATCH APPLIED]"
+    type: "replace"
     
   CKV_AWS_18: 
-        "search_pattern": r'(resource\s+"aws_s3_bucket"\s+"[^"]+"\s*\{)',
-        "patch_text": r'\1\n  logging {\n    target_bucket = "log-bucket"\n  } # [VANGUARD NANO-PATCH APPLIED]',
-        "type": "replace"
+    "search_pattern": r'(resource\s+"aws_s3_bucket"\s+"[^"]+"\s*\{)',
+    "patch_text": r'\1\n  logging {\n    target_bucket = "log-bucket"\n  } # [VANGUARD NANO-PATCH APPLIED]',
+    "type": "replace"
 
-  CKV_DOCKER_3: 
-        "action": "insert_user"
-        "patch_text": "USER vanguard_svc # [VANGUARD NANO-PATCH APPLIED]\n",
-        "type": "insert"
+  CKV_DOCKER_3:
+    action: "insert_user"
+    patch_text: "USER vanguard_svc # [VANGUARD NANO-PATCH APPLIED]\n"
+    type: "insert"
     
 # Terraform: Ensure all data stored in the S3 bucket is securely encrypted at rest
   CKV_AWS_19:
