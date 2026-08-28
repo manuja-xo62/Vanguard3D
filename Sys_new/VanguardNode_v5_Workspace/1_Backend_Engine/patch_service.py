@@ -62,18 +62,17 @@ def apply_patch(
     try:
         file_path.relative_to(target_path)
     except ValueError:
-        return False, f"Access denied: Target path '{file_path_rel}' escapes base directory."
+        return False, f"Access denied: Target path escapes base directory."
 
     if not file_path.exists():
         return False, f"File not found: {file_path}"
 
     template = get_remediation_template(rule_id)
-    
-    # FALLBACK 1: Handle rules missing from vanguard_config.yml gracefully
     if not template:
+        # Safer fallback: appends a manual review flag instead of destructive replacement
         template = {
-            "search_pattern": r"^.*$",
-            "patch_text": "# [VANGUARD NANO-PATCH APPLIED]",
+            "search_pattern": r"(.*)",
+            "patch_text": r"\1 # [VANGUARD MANUAL REVIEW REQUIRED]",
             "type": "replace"
         }
 
@@ -94,25 +93,43 @@ def apply_patch(
 
     start_line_idx = max(0, start_line_idx)
     end_line_idx = min(len(lines), end_line_idx)
-
     patch_applied = False
 
     if "search_pattern" in template:
-        pattern = re.compile(template["search_pattern"])
-        # Search scoped range first
-        for i in range(start_line_idx, end_line_idx):
-            if i < len(lines) and pattern.search(lines[i]):
-                lines[i] = pattern.sub(template["patch_text"], lines[i])
-                patch_applied = True
-                break
+        # Implemented Multiline Regex Support
+        flags = re.MULTILINE | re.DOTALL
+        pattern = re.compile(template["search_pattern"], flags=flags)
         
-        # FALLBACK 2: Search entire file if target line shifted outside bounded range
+        block_text = "".join(lines[start_line_idx:end_line_idx])
+        if pattern.search(block_text):
+            new_block = pattern.sub(template["patch_text"], block_text)
+            lines[start_line_idx:end_line_idx] = [new_block]
+            patch_applied = True
+            
         if not patch_applied:
-            for i in range(len(lines)):
-                if pattern.search(lines[i]):
-                    lines[i] = pattern.sub(template["patch_text"], lines[i])
+            full_text = "".join(lines)
+            if pattern.search(full_text):
+                new_full_text = pattern.sub(template["patch_text"], full_text)
+                lines.clear()
+                lines.append(new_full_text)
+                patch_applied = True
+
+    elif template.get("action") == "insert_healthcheck":
+        if "HEALTHCHECK" in file_content or "[VANGUARD NANO-PATCH APPLIED]" in file_content:
+            return True, f"File {file_path_rel} already contains a healthcheck."
+
+        for i in range(start_line_idx, end_line_idx):
+            if i < len(lines):
+                clean_line = lines[i].strip().upper()
+                if clean_line.startswith("CMD") or clean_line.startswith("ENTRYPOINT"):
+                    lines.insert(i, template["patch_text"])
                     patch_applied = True
                     break
+
+        if not patch_applied and lines:
+            insert_idx = min(end_line_idx, len(lines))
+            lines.insert(insert_idx, template["patch_text"])
+            patch_applied = True
 
     elif template.get("action") == "insert_user":
         if "vanguard_svc" in file_content or "[VANGUARD NANO-PATCH APPLIED]" in file_content:
