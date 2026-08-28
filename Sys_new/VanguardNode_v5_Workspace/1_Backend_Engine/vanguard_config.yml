@@ -28,3 +28,44 @@ remediation_templates:
     action: "insert_user"
     patch_text: "USER vanguard_svc # [VANGUARD NANO-PATCH APPLIED]\n"
     type: "insert"
+# Terraform: Ensure all data stored in the S3 bucket is securely encrypted at rest
+  CKV_AWS_19:
+    search_pattern: 'encrypted\s*=\s*false'
+    patch_text: 'encrypted = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+
+  # Terraform: Ensure all data stored in the Launch configuration EBS is securely encrypted
+  CKV_AWS_8:
+    search_pattern: 'encrypted\s*=\s*false'
+    patch_text: 'encrypted = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+
+  # Terraform: Ensure all data stored in the S3 bucket have versioning enabled (AWS Provider v4+)
+  CKV_AWS_21:
+    search_pattern: 'status\s*=\s*"(Suspended|Disabled)"'
+    patch_text: 'status = "Enabled" # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+
+  # Terraform: Ensure RDS instances have deletion protection enabled
+  CKV_AWS_177:
+    search_pattern: 'deletion_protection\s*=\s*false'
+    patch_text: 'deletion_protection = true # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
+
+  # Docker: Ensure that HEALTHCHECK instructions have been added to container images
+  CKV_DOCKER_2:
+    action: "insert_healthcheck"
+    patch_text: "HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD curl -f http://localhost/ || exit 1 # [VANGUARD NANO-PATCH APPLIED]\n"
+    type: "insert"
+
+  # Docker: Ensure COPY is used instead of ADD in Dockerfiles
+  CKV_DOCKER_4:
+    search_pattern: '^\s*ADD\s+'
+    patch_text: 'COPY '
+    type: "replace"
+
+  # Docker: Ensure apt-get install uses --no-install-recommends
+  CKV_DOCKER_9:
+    search_pattern: 'apt-get\s+install\s+(?!.*--no-install-recommends)(-y\s+)?([a-zA-Z0-9\-_\s]+)'
+    patch_text: 'apt-get install --no-install-recommends \1\2 # [VANGUARD NANO-PATCH APPLIED]'
+    type: "replace"
