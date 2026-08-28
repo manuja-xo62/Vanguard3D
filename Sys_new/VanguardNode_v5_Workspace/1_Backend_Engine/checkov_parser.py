@@ -3,8 +3,10 @@ import shutil
 import subprocess
 import sys
 import uuid
+import re
 from pathlib import Path
 from typing import Dict, List, Any
+from risk_engine import load_config
 
 
 def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[str, Any]:
@@ -17,18 +19,46 @@ def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[st
     file_line_range = raw_check.get("file_line_range", [0, 0])
     line_num = file_line_range[0] if file_line_range else 0
 
+    rule_id = str(raw_check.get("check_id", "UNKNOWN_RULE"))
     code_block = raw_check.get("code_block", "")
+
+    # Look up remediation search pattern to locate the exact line of the finding
+    config = load_config()
+    template = config.get("remediation_templates", {}).get(rule_id, {})
+    search_pattern = template.get("search_pattern")
+
+    precise_line = None
     if isinstance(code_block, list):
-        code_snippet_str = "".join([line[1] for line in code_block if len(line) > 1])
+        code_lines = []
+        for item in code_block:
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                code_lines.append((item[0], item[1]))
+            elif isinstance(item, str):
+                code_lines.append((0, item))
+
+        if search_pattern:
+            try:
+                pattern = re.compile(search_pattern)
+                for l_no, l_str in code_lines:
+                    if pattern.search(l_str):
+                        precise_line = l_no
+                        break
+            except re.error:
+                pass
+
+        code_snippet_str = "".join([l_str for _, l_str in code_lines])
     else:
         code_snippet_str = str(code_block)
+
+    if precise_line is not None and precise_line > 0:
+        line_num = precise_line
 
     raw_sev = raw_check.get("severity")
     severity = str(raw_sev).capitalize() if raw_sev and str(raw_sev).lower() != "none" else "Medium"
 
     return {
         "FindingId": f"fnd_{uuid.uuid4().hex[:8]}",
-        "RuleId": str(raw_check.get("check_id", "UNKNOWN_RULE")),
+        "RuleId": rule_id,
         "RuleTitle": str(raw_check.get("check_name", "Unspecified Configuration Issue")),
         "Severity": severity,
         "FilePath": rel_path,

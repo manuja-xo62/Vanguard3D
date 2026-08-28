@@ -99,7 +99,9 @@ def apply_patch(
         block_text = "".join(lines[start_line_idx:end_line_idx])
         if pattern.search(block_text):
             new_block = pattern.sub(template["patch_text"], block_text)
-            lines[start_line_idx:end_line_idx] = [new_block]
+            # Ensure multi-line string replacement preserves individual line items
+            new_lines = new_block.splitlines(keepends=True)
+            lines[start_line_idx:end_line_idx] = new_lines
             patch_applied = True
             
         if not patch_applied:
@@ -107,7 +109,7 @@ def apply_patch(
             if pattern.search(full_text):
                 new_full_text = pattern.sub(template["patch_text"], full_text)
                 lines.clear()
-                lines.append(new_full_text)
+                lines.extend(new_full_text.splitlines(keepends=True))
                 patch_applied = True
 
     elif template.get("action") == "insert_healthcheck":

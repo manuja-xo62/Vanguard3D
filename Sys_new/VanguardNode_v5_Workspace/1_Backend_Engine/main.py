@@ -56,6 +56,7 @@ class BatchPatchRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
+
 class RollbackRequest(BaseModel):
     targetDir: Optional[str] = Field(None, alias="target_dir")
     patchId: Optional[str] = None
@@ -82,6 +83,13 @@ class ScanRequest(BaseModel):
         return "" if path.strip().lower() in ("", "string") else path.strip()
 
 
+def sanitize_file_path(path: str) -> str:
+    if not path:
+        return ""
+    # Normalize backslashes to forward slashes and strip leading slashes
+    return path.replace("\\", "/").lstrip("/")
+
+
 @app.post("/api/scan")
 async def execute_scan(req: Optional[ScanRequest] = None, target_dir: Optional[str] = None):
     query_dir = target_dir.strip() if (target_dir and target_dir.strip().lower() != "string") else ""
@@ -104,7 +112,7 @@ async def execute_scan(req: Optional[ScanRequest] = None, target_dir: Optional[s
     for file_entry in risk_data.get("files", []):
         for finding in file_entry.get("findings", []):
             f_id = finding.get("FindingId") or finding.get("finding_id")
-            f_path = finding.get("FilePath") or finding.get("file_path")
+            f_path = sanitize_file_path(finding.get("FilePath") or finding.get("file_path") or "")
             r_id = finding.get("RuleId") or finding.get("rule_id")
             r_title = finding.get("RuleTitle") or finding.get("rule_title", "")
             sev = (finding.get("Severity") or finding.get("severity") or "MEDIUM").upper()
@@ -210,7 +218,8 @@ async def apply_single_patch(req: PatchRequest):
     # Resolve parameters from DB record first, fallback to incoming request fields
     rule_id = (finding.get("rule_id") if finding else None) or req.ruleId or ""
     line_num = (finding.get("line_number") if finding else None) or req.lineNumber or 0
-    file_path = req.filePath or (finding.get("file_path") if finding else None)
+    raw_file_path = req.filePath or (finding.get("file_path") if finding else None)
+    file_path = sanitize_file_path(raw_file_path or "")
 
     if not file_path:
         raise HTTPException(status_code=400, detail="Target file path could not be resolved from request or database.")
@@ -250,16 +259,17 @@ async def apply_single_patch(req: PatchRequest):
     return {"status": "SUCCESS", "message": msg}
 
 
-@app.post("/api/patch_batch")
 async def apply_batch_patch(req: BatchPatchRequest):
     patches_with_line_info = []
     
     for item in req.patches:
-        finding = get_finding_by_id(item.findingId)
-        line_num = finding.get("line_number", 0) if finding else 0
-        rule_id = finding.get("rule_id", "") if finding else ""
+        finding = get_finding_by_id(item.findingId) if item.findingId else None
+        line_num = (finding.get("line_number", 0) if finding else 0) or item.lineNumber or 0
+        rule_id = (finding.get("rule_id", "") if finding else "") or item.ruleId or ""
         
-        file_path = item.filePath or (finding.get("file_path") if finding else None)
+        raw_file_path = item.filePath or (finding.get("file_path") if finding else None)
+        file_path = sanitize_file_path(raw_file_path or "")
+
         target_dir = item.targetDir or req.targetDir
         if not target_dir and finding:
             scan_id = item.scanId or finding.get("scan_id")
@@ -278,25 +288,30 @@ async def apply_batch_patch(req: BatchPatchRequest):
                 "item": item
             })
 
-    # Sort descending by line number to protect top line offsets during batch modifications
-    patches_with_line_info.sort(key=lambda x: x["line_num"], reverse=True)
+    # Group by file_path, then sort descending by line_num per file
+    from collections import defaultdict
+    file_groups = defaultdict(list)
+    for p in patches_with_line_info:
+        file_groups[p["file_path"]].append(p)
 
     applied = []
-    for patch_info in patches_with_line_info:
-        item = patch_info["item"]
-        f_path = patch_info["file_path"]
-        t_dir = patch_info["target_dir"]
+    for f_path, group in file_groups.items():
+        group.sort(key=lambda x: x["line_num"], reverse=True)
+        for patch_info in group:
+            item = patch_info["item"]
+            t_dir = patch_info["target_dir"]
 
-        success, _ = apply_patch(
-            target_dir=t_dir,
-            file_path_rel=f_path,
-            rule_id=patch_info["rule_id"],
-            line_num=patch_info["line_num"]
-        )
+            success, _ = apply_patch(
+                target_dir=t_dir,
+                file_path_rel=f_path,
+                rule_id=patch_info["rule_id"],
+                line_num=patch_info["line_num"]
+            )
 
-        if success:
-            record_patch_event(item.findingId, f"{f_path}.vanguard_backup")
-            applied.append(item.findingId)
+            if success:
+                if item.findingId:
+                    record_patch_event(item.findingId, f"{f_path}.vanguard_backup")
+                applied.append(item.findingId or f_path)
 
     await event_queue.put({"event": "BATCH_PATCH_COMPLETED", "appliedCount": len(applied)})
     return {"status": "SUCCESS", "appliedFindingIds": applied}
@@ -305,7 +320,19 @@ async def apply_batch_patch(req: BatchPatchRequest):
 @app.post("/api/rollback")
 async def rollback_patch(req: RollbackRequest):
     target_dir = req.targetDir or "."
-    file_path = req.filePath or req.target_file
+    
+    # Fallback to finding lookup if filePath is missing
+    raw_file_path = req.filePath or req.target_file
+    if not raw_file_path and req.patchId:
+        finding = get_finding_by_id(req.patchId)
+        if finding:
+            raw_file_path = finding.get("file_path")
+            if not req.targetDir and finding.get("scan_id"):
+                scan_data = get_scan_by_id(finding.get("scan_id"))
+                if scan_data:
+                    target_dir = scan_data.get("target_path", ".")
+
+    file_path = sanitize_file_path(raw_file_path or "")
 
     if not file_path:
         raise HTTPException(
@@ -338,4 +365,3 @@ async def stream_events(request: Request):
                 yield ": keepalive\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
-
