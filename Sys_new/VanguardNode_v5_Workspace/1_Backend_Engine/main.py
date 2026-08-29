@@ -95,11 +95,15 @@ class PipelineRunRequest(BaseModel):
     target_dir: str
 
 class GitPRRequest(BaseModel):
-    targetDir: str = Field(..., alias="target_dir")
+    targetDir: Optional[str] = Field(None, alias="target_dir")
+    target_dir: Optional[str] = None
     branchName: Optional[str] = Field("security/vanguard-remediation-patch", alias="branch_name")
     scanId: Optional[str] = Field("scan_manual", alias="scan_id")
 
     model_config = ConfigDict(populate_by_name=True)
+
+    def resolved_target_dir(self) -> str:
+        return (self.targetDir or self.target_dir or ".").strip()
 
 class PurgeRequest(BaseModel):
     targetDir: Optional[str] = Field(None, alias="target_dir")
