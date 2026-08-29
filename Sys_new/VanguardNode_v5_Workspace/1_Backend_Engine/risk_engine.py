@@ -3,8 +3,10 @@ import yaml
 from pathlib import Path
 from typing import Dict, List, Any, Union
 
+CONFIG_PATH = Path(__file__).parent / "vanguard_config.yml"
 
-def load_config(config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
+
+def load_config(config_path: str = str(CONFIG_PATH)) -> Dict[str, Any]:
     cfg_file = Path(config_path)
     if not cfg_file.exists():
         return {
@@ -67,7 +69,7 @@ def get_file_criticality(file_path: str, criticality_weights: Dict[str, float]) 
     return criticality_weights.get("**", 1.0)
 
 
-def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config_path: str = "vanguard_config.yml") -> Dict[str, Any]:
+def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config_path: str = str(CONFIG_PATH)) -> Dict[str, Any]:
     if isinstance(findings, dict):
         findings = findings.get("Findings") or findings.get("findings") or []
 

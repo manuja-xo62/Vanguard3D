@@ -8,6 +8,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ConfigDict
 import subprocess
+import git_manager
+import event_store
+from pathlib import Path
 
 from event_store import (
     init_db, record_scan, get_scan_by_id, get_replay_sequence,
@@ -84,9 +87,15 @@ class ScanRequest(BaseModel):
         return "" if path.strip().lower() in ("", "string") else path.strip()
 
 class PipelineRunRequest(BaseModel):
-    target_dir: str
     scan_id: str
-    branch_name: str = "security/vanguard-remediation-patch"
+    target_dir: str
+
+class GitPRRequest(BaseModel):
+    targetDir: str = Field(..., alias="target_dir")
+    branchName: Optional[str] = Field("security/vanguard-remediation-patch", alias="branch_name")
+    scanId: Optional[str] = Field("scan_manual", alias="scan_id")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 def sanitize_file_path(path: str) -> str:
@@ -218,6 +227,7 @@ async def stream_report(scan_id: str):
 
 @app.post("/api/patch")
 async def apply_single_patch(req: PatchRequest):
+    
     # Try fetching finding from DB if finding_id is provided
     finding = get_finding_by_id(req.findingId) if req.findingId else None
     
@@ -265,7 +275,8 @@ async def apply_single_patch(req: PatchRequest):
     return {"status": "SUCCESS", "message": msg}
 
 
-async def apply_batch_patch(req: BatchPatchRequest):
+@app.post("/api/patch/batch")
+async def apply_batch_patch_endpoint(req: BatchPatchRequest):
     patches_with_line_info = []
     
     for item in req.patches:
@@ -374,21 +385,86 @@ async def stream_events(request: Request):
 
 @app.post("/api/pipeline/verify_delta")
 async def verify_delta_scan(req: PipelineRunRequest):
-    # Triggers a delta verification on the TargetDirectory
-    # Replace with your actual scanner hook (e.g., Checkov/Trivy)
+    # Fetch baseline scan record to calculate dynamic deltas
+    baseline_scan = get_scan_by_id(req.scan_id)
+    pre_risk = baseline_scan.get("r_global", 0.0) if baseline_scan else 0.0
+    baseline_findings = baseline_scan.get("findings", []) if baseline_scan else []
+
+    # Run live Checkov scan
+    try:
+        result = subprocess.run(
+            ["checkov", "-d", req.target_dir, "-o", "json"],
+            capture_output=True, text=True, check=False
+        )
+        scan_data = json.loads(result.stdout) if (result.stdout and result.stdout.strip().startswith("{")) else {}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Scanner execution failed: {str(e)}")
+        
+    findings = scan_data.get("results", {}).get("failed_checks", [])
+    
+    # Calculate live risk scores dynamically
+    post_risk = sum(10.0 if f.get("severity") == "CRITICAL" else 5.0 for f in findings)
+    compliance_score = max(0, 100 - int(post_risk))
+
+    # Calculate dynamic resolved counts by comparing baseline IDs against current scan
+    current_finding_ids = {f.get("check_id") for f in findings if f.get("check_id")}
+    
+    critical_resolved = 0
+    high_resolved = 0
+    
+    for base_f in baseline_findings:
+        b_id = base_f.get("finding_id") or base_f.get("rule_id")
+        b_sev = str(base_f.get("severity", "")).upper()
+        
+        if b_id and b_id not in current_finding_ids:
+            if b_sev == "CRITICAL":
+                critical_resolved += 1
+            elif b_sev == "HIGH":
+                high_resolved += 1
+
+    # Format findings array safely to prevent KeyErrors
+    triage_logs = [{
+        "FindingId": f.get("check_id", "UNKNOWN_RULE"), 
+        "Severity": (f.get("severity") or "HIGH").upper(), 
+        "FilePath": sanitize_file_path(f.get("file_path", ""))
+    } for f in findings]
+    
+    event_store.log_post_scan(req.scan_id, pre_risk, post_risk, triage_logs)
+    
     return {
         "status": "SUCCESS",
-        "message": "Delta scan complete. No syntax errors detected.",
-        "unresolved_count": 0,
-        "delta_findings": []
+        "PrePatchRiskScore": pre_risk,
+        "PostPatchRiskScore": post_risk,
+        "CriticalResolved": critical_resolved,
+        "HighResolved": high_resolved,
+        "ComplianceScore": compliance_score,
+        "TriageLogs": triage_logs
     }
 
+@app.post("/api/pipeline/purge_backups")
+async def purge_backups(req: PipelineRunRequest):
+    target = Path(req.target_dir)
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="Target directory not found")
+        
+    purged_count = 0
+    for backup_file in target.rglob("*.vanguard_backup"):
+        try:
+            backup_file.unlink(missing_ok=True)
+            purged_count += 1
+        except OSError:
+            continue
+            
+    return {"status": "SUCCESS", "files_purged": purged_count}
+
 @app.post("/api/pipeline/git/create_pr")
-async def create_git_pr(req: PipelineRunRequest):
-    try:
-        subprocess.run(f"git -C {req.target_dir} checkout -b {req.branch_name}", shell=True, check=True)
-        subprocess.run(f"git -C {req.target_dir} add .", shell=True, check=True)
-        subprocess.run(f"git -C {req.target_dir} commit -m '[Vanguard] Automated Security Patch Applied'", shell=True, check=True)
-        return {"status": "SUCCESS", "branch": req.branch_name}
-    except Exception as e:
-        return {"status": "FAILED", "error": str(e)}
+@app.post("/api/git/pr")
+async def trigger_pr(req: GitPRRequest):
+    baseline_scan = get_scan_by_id(req.scanId) if req.scanId else None
+    current_risk = baseline_scan.get("r_global", 0.0) if baseline_scan else 0.0
+    compliance_score = max(0, 100 - int(current_risk))
+    
+    result = git_manager.create_remediation_pr(req.targetDir, req.scanId, compliance_score)
+    if result.get("status") != "SUCCESS":
+        raise HTTPException(status_code=500, detail=result.get("error", "Git PR creation failed"))
+    return result

@@ -505,18 +505,6 @@ remediation_templates:
     patch_text: 'RUN \1 # [VANGUARD NANO-PATCH APPLIED - SUDO REMOVED]'
     type: "replace"
   
-# CKV_AWS_21: S3 Versioning
-  CKV_AWS_21:
-    search_pattern: 'resource\s+"aws_s3_bucket"\s+"([^"]+)"\s*\{'
-    patch_text: 'resource "aws_s3_bucket" "\1" {\n  versioning {\n    enabled = true\n  } # [VANGUARD NANO-PATCH APPLIED]'
-    type: "replace"
-
-  # CKV_AWS_19 / CKV_AWS_145: S3 Server Side Encryption
-  CKV_AWS_19:
-    search_pattern: 'resource\s+"aws_s3_bucket"\s+"([^"]+)"\s*\{'
-    patch_text: 'resource "aws_s3_bucket" "\1" {\n  server_side_encryption_configuration {\n    rule {\n      apply_server_side_encryption_by_default {\n        sse_algorithm = "aws:kms"\n      }\n    }\n  } # [VANGUARD NANO-PATCH APPLIED]'
-    type: "replace"
-
   # CKV_AWS_53 / CKV_AWS_108: S3 Public Access Block
   CKV_AWS_53:
     search_pattern: 'resource\s+"aws_s3_bucket"\s+"([^"]+)"\s*\{'
@@ -533,11 +521,6 @@ remediation_templates:
   CKV_AWS_146:
     search_pattern: 'resource\s+"aws_s3_bucket"\s+"([^"]+)"\s*\{'
     patch_text: 'resource "aws_s3_bucket" "\1" {\n  # Event notifications configuration\n'
-    type: "replace"
-  # CKV_AWS_53: S3 Public Access Block
-  CKV_AWS_53:
-    search_pattern: '(resource\s+"aws_s3_bucket"\s+"[^"]+"\s*\{)'
-    patch_text: '\1\n  # [VANGUARD NANO-PATCH APPLIED]\n}'
     type: "replace"
 
   # bc-aws-2-61 / CKV_AWS_300: S3 Lifecycle Configuration

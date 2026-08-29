@@ -74,12 +74,13 @@ def init_db():
         timestamp TEXT
     );
 
-    CREATE TABLE IF NOT EXISTS pipeline_runs (
-                scan_id TEXT PRIMARY KEY,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                pre_risk_score REAL,
-                post_risk_score REAL,
-                triage_payload TEXT
+    CCREATE TABLE IF NOT EXISTS pipeline_runs (
+        scan_id TEXT PRIMARY KEY,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        pre_risk_score REAL,
+        post_risk_score REAL,
+        triage_payload TEXT
+    );
     """)
 
     conn.commit()
