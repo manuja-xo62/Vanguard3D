@@ -23,6 +23,7 @@ from checkov_parser import run_checkov_scan
 from risk_engine import calculate_risk
 from patch_service import apply_patch, execute_rollback
 from report_generator import generate_pdf_report
+from sarif_generator import generate_sarif_report
 
 app = FastAPI(title="Vanguard Backend Engine")
 event_queue: asyncio.Queue = asyncio.Queue()
@@ -224,6 +225,19 @@ async def stream_report(scan_id: str):
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=audit_{scan_id}.pdf"}
+    )
+
+@app.get("/api/report/sarif/{scan_id}")
+async def stream_sarif_report(scan_id: str):
+    scan_data = get_scan_by_id(scan_id)
+    if not scan_data:
+        raise HTTPException(status_code=404, detail="Scan ID not found")
+
+    sarif_json_str = generate_sarif_report(scan_data)
+    return StreamingResponse(
+        io.BytesIO(sarif_json_str.encode("utf-8")),
+        media_type="application/json",
+        headers={"Content-Disposition": f"attachment; filename=sarif_{scan_id}.sarif"}
     )
 
 
