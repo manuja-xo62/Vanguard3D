@@ -11,6 +11,8 @@ import subprocess
 import git_manager
 import event_store
 from pathlib import Path
+import sys
+import shutil
 
 from event_store import (
     init_db, record_scan, get_scan_by_id, get_replay_sequence,
@@ -169,8 +171,8 @@ async def execute_scan(req: Optional[ScanRequest] = None, target_dir: Optional[s
     )
 
     payload = {
-        "scanId": scan_id,
-        "totalFindings": len(flat_findings),
+        "scan_id": scan_id,
+        "total_Findings": len(flat_findings),
         "findings": flat_findings
     }
     
@@ -390,18 +392,29 @@ async def verify_delta_scan(req: PipelineRunRequest):
     pre_risk = baseline_scan.get("r_global", 0.0) if baseline_scan else 0.0
     baseline_findings = baseline_scan.get("findings", []) if baseline_scan else []
 
-    # Run live Checkov scan
+    # Run live Checkov scan with PATH and sys.executable fallback
     try:
-        result = subprocess.run(
-            ["checkov", "-d", req.target_dir, "-o", "json"],
-            capture_output=True, text=True, check=False
-        )
-        scan_data = json.loads(result.stdout) if (result.stdout and result.stdout.strip().startswith("{")) else {}
+        checkov_bin = shutil.which("checkov")
+        cmd = [checkov_bin, "-d", req.target_dir, "-o", "json"] if checkov_bin else [sys.executable, "-m", "checkov.main", "-d", req.target_dir, "-o", "json"]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        
+        try:
+            parsed_output = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            parsed_output = {}
+
+        # Handle Checkov returning a list (multi-framework) or a dict (single-framework)
+        findings = []
+        if isinstance(parsed_output, list):
+            for framework in parsed_output:
+                findings.extend(framework.get("results", {}).get("failed_checks", []))
+        else:
+            findings = parsed_output.get("results", {}).get("failed_checks", [])
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Scanner execution failed: {str(e)}")
         
-    findings = scan_data.get("results", {}).get("failed_checks", [])
-    
     # Calculate live risk scores dynamically
     post_risk = sum(10.0 if f.get("severity") == "CRITICAL" else 5.0 for f in findings)
     compliance_score = max(0, 100 - int(post_risk))
