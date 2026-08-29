@@ -36,6 +36,8 @@ class FindingModel(BaseModel):
     findingId: str = Field(..., alias="finding_id")
     filePath: str = Field(..., alias="file_path")
     lineNumber: int = Field(..., alias="line_number")
+    startLine: Optional[int] = Field(None, alias="start_line")
+    endLine: Optional[int] = Field(None, alias="end_line")
     ruleId: str = Field(..., alias="rule_id")
     ruleTitle: Optional[str] = Field("", alias="rule_title")
     severity: Optional[str] = Field("MEDIUM", alias="severity")
