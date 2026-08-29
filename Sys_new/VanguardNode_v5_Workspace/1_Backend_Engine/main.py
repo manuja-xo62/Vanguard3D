@@ -56,6 +56,8 @@ class PatchRequest(BaseModel):
     filePath: Optional[str] = Field(None, alias="file_path")
     ruleId: Optional[str] = Field(None, alias="rule_id")
     lineNumber: Optional[int] = Field(0, alias="line_number")
+    startLine: Optional[int] = Field(None, alias="start_line")
+    endLine: Optional[int] = Field(None, alias="end_line")
 
     model_config = ConfigDict(populate_by_name=True)
 
