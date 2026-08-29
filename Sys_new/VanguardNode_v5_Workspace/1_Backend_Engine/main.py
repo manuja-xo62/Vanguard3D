@@ -270,6 +270,9 @@ async def apply_single_patch(req: PatchRequest):
     line_num = (finding.get("line_number") if finding else None) or req.lineNumber or 0
     raw_file_path = req.filePath or (finding.get("file_path") if finding else None)
     file_path = sanitize_file_path(raw_file_path or "")
+    start_line = (finding.get("start_line") if finding else None) or req.startLine or 0
+    end_line = (finding.get("end_line") if finding else None) or req.endLine or 0
+    line_range = [start_line, end_line] if start_line and end_line else None
 
     if not file_path:
         raise HTTPException(status_code=400, detail="Target file path could not be resolved from request or database.")
@@ -295,7 +298,8 @@ async def apply_single_patch(req: PatchRequest):
         target_dir=target_dir,
         file_path_rel=file_path,
         rule_id=rule_id,
-        line_num=line_num
+        line_num=line_num,
+        line_range=line_range
     )
 
     if not success:
@@ -317,6 +321,9 @@ async def apply_batch_patch_endpoint(req: BatchPatchRequest):
         finding = get_finding_by_id(item.findingId) if item.findingId else None
         line_num = (finding.get("line_number", 0) if finding else 0) or item.lineNumber or 0
         rule_id = (finding.get("rule_id", "") if finding else "") or item.ruleId or ""
+        start_line = (finding.get("start_line", 0) if finding else 0) or getattr(item, "startLine", 0)
+        end_line = (finding.get("end_line", 0) if finding else 0) or getattr(item, "endLine", 0)
+        line_range = [start_line, end_line] if start_line and end_line else None
         
         raw_file_path = item.filePath or (finding.get("file_path") if finding else None)
         file_path = sanitize_file_path(raw_file_path or "")
@@ -333,6 +340,7 @@ async def apply_batch_patch_endpoint(req: BatchPatchRequest):
         if file_path:
             patches_with_line_info.append({
                 "line_num": line_num,
+                "line_range": line_range,
                 "rule_id": rule_id,
                 "file_path": file_path,
                 "target_dir": target_dir,
@@ -448,7 +456,9 @@ async def verify_delta_scan(req: PipelineRunRequest):
         raise HTTPException(status_code=500, detail=f"Scanner execution failed: {str(e)}")
         
     # Calculate live risk scores dynamically
-    post_risk = sum(10.0 if f.get("severity") == "CRITICAL" else 5.0 for f in findings)
+    risk_data = calculate_risk(findings)
+    post_risk = risk_data.get("R_global", 0.0)
+    
     compliance_score = max(0, 100 - int(post_risk))
 
     # Calculate dynamic resolved counts by comparing baseline IDs against current scan
