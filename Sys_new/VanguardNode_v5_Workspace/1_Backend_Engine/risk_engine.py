@@ -93,6 +93,7 @@ def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config
         processed_findings = []
 
         for finding in file_findings:
+            status = str(finding.get("Status") or finding.get("status") or "VULNERABLE").upper()
             severity = str(finding.get("Severity") or finding.get("severity") or "MEDIUM").upper()
             w_sev = sev_weights.get(severity, 3)
 
@@ -107,7 +108,10 @@ def calculate_risk(findings: Union[List[Dict[str, Any]], Dict[str, Any]], config
                     break
 
             finding_score = w_sev * w_exp * w_blast
-            r_file += finding_score
+
+            # Correct arithmetic inversion: Do not calculate risk for remediated findings
+            if status != "PATCHED":
+                r_file += finding_score
 
             finding_copy = finding.copy()
             finding_copy["computed_score"] = finding_score
