@@ -497,10 +497,16 @@ async def purge_backups_endpoint(req: Optional[PurgeRequest] = None, target_dir:
 @app.post("/api/git/pr")
 async def trigger_pr(req: GitPRRequest):
     baseline_scan = get_scan_by_id(req.scanId) if req.scanId else None
-    current_risk = baseline_scan.get("r_global", 0.0) if baseline_scan else 0.0
-    compliance_score = max(0, 100 - int(current_risk))
     
+    if baseline_scan:
+        current_risk = baseline_scan.get("r_global", 0.0)
+        compliance_score = max(0, 100 - int(current_risk))
+    else:
+        compliance_score = 100
+
     result = git_manager.create_remediation_pr(req.targetDir, req.scanId, compliance_score)
+    
     if result.get("status") != "SUCCESS":
-        raise HTTPException(status_code=500, detail=result.get("error", "Git PR creation failed"))
+        raise HTTPException(status_code=400, detail=result.get("error", "Git PR creation failed"))
+        
     return result
