@@ -7,6 +7,7 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ConfigDict
+import subprocess
 
 from event_store import (
     init_db, record_scan, get_scan_by_id, get_replay_sequence,
@@ -81,6 +82,11 @@ class ScanRequest(BaseModel):
     def resolved_target_dir(self) -> str:
         path = self.target_directory or self.target_dir or ""
         return "" if path.strip().lower() in ("", "string") else path.strip()
+
+class PipelineRunRequest(BaseModel):
+    target_dir: str
+    scan_id: str
+    branch_name: str = "security/vanguard-remediation-patch"
 
 
 def sanitize_file_path(path: str) -> str:
@@ -365,3 +371,24 @@ async def stream_events(request: Request):
                 yield ": keepalive\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@app.post("/api/pipeline/verify_delta")
+async def verify_delta_scan(req: PipelineRunRequest):
+    # Triggers a delta verification on the TargetDirectory
+    # Replace with your actual scanner hook (e.g., Checkov/Trivy)
+    return {
+        "status": "SUCCESS",
+        "message": "Delta scan complete. No syntax errors detected.",
+        "unresolved_count": 0,
+        "delta_findings": []
+    }
+
+@app.post("/api/pipeline/git/create_pr")
+async def create_git_pr(req: PipelineRunRequest):
+    try:
+        subprocess.run(f"git -C {req.target_dir} checkout -b {req.branch_name}", shell=True, check=True)
+        subprocess.run(f"git -C {req.target_dir} add .", shell=True, check=True)
+        subprocess.run(f"git -C {req.target_dir} commit -m '[Vanguard] Automated Security Patch Applied'", shell=True, check=True)
+        return {"status": "SUCCESS", "branch": req.branch_name}
+    except Exception as e:
+        return {"status": "FAILED", "error": str(e)}

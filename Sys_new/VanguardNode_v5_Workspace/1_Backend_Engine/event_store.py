@@ -73,6 +73,13 @@ def init_db():
         time_taken_seconds REAL,
         timestamp TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS pipeline_runs (
+                scan_id TEXT PRIMARY KEY,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                pre_risk_score REAL,
+                post_risk_score REAL,
+                triage_payload TEXT
     """)
 
     conn.commit()
@@ -263,3 +270,17 @@ def get_all_scans() -> List[Dict[str, Any]]:
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+def get_baseline(scan_id: str) -> float:
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT pre_risk_score FROM pipeline_runs WHERE scan_id = ?", (scan_id,))
+        row = cursor.fetchone()
+        return row[0] if row else 0.0
+
+def log_post_scan(scan_id: str, pre_risk: float, post_risk: float, payload: list):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            REPLACE INTO pipeline_runs (scan_id, pre_risk_score, post_risk_score, triage_payload)
+            VALUES (?, ?, ?, ?)
+        """, (scan_id, pre_risk, post_risk, json.dumps(payload)))
