@@ -182,3 +182,18 @@ def execute_rollback(target_dir: str, file_path_rel: str) -> dict:
         return {"status": "success", "message": f"Successfully rolled back {file_path_rel}"}
     except Exception as e:
         return {"status": "error", "message": f"Rollback operation failed: {str(e)}"}
+
+def purge_backup_files(target_dir: str) -> Tuple[bool, int, str]:
+    base_path = Path(target_dir).resolve()
+    if not base_path.exists() or not base_path.is_dir():
+        return False, 0, f"Target directory does not exist: {target_dir}"
+
+    purged_count = 0
+    try:
+        for backup_file in base_path.rglob("*.vanguard_backup"):
+            if backup_file.is_file():
+                backup_file.unlink(missing_ok=True)
+                purged_count += 1
+        return True, purged_count, f"Successfully purged {purged_count} backup file(s)."
+    except Exception as e:
+        return False, purged_count, f"Error purging backup files: {str(e)}"

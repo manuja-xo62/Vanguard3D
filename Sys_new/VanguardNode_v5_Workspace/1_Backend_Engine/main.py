@@ -24,6 +24,7 @@ from risk_engine import calculate_risk
 from patch_service import apply_patch, execute_rollback
 from report_generator import generate_pdf_report
 from sarif_generator import generate_sarif_report
+from patch_service import purge_backup_files
 
 app = FastAPI(title="Vanguard Backend Engine")
 event_queue: asyncio.Queue = asyncio.Queue()
@@ -99,6 +100,15 @@ class GitPRRequest(BaseModel):
     scanId: Optional[str] = Field("scan_manual", alias="scan_id")
 
     model_config = ConfigDict(populate_by_name=True)
+
+class PurgeRequest(BaseModel):
+    targetDir: Optional[str] = Field(None, alias="target_dir")
+    target_dir: Optional[str] = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    def resolved_target_dir(self) -> str:
+        return (self.targetDir or self.target_dir or ".").strip()
 
 
 def sanitize_file_path(path: str) -> str:
@@ -468,21 +478,20 @@ async def verify_delta_scan(req: PipelineRunRequest):
         "TriageLogs": triage_logs
     }
 
+@app.post("/api/purge_backups")
 @app.post("/api/pipeline/purge_backups")
-async def purge_backups(req: PipelineRunRequest):
-    target = Path(req.target_dir)
-    if not target.exists():
-        raise HTTPException(status_code=404, detail="Target directory not found")
+async def purge_backups_endpoint(req: Optional[PurgeRequest] = None, target_dir: Optional[str] = None):
+    effective_dir = (target_dir or (req.resolved_target_dir() if req else ".")).strip()
+    
+    success, purged_count, message = purge_backup_files(effective_dir)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
         
-    purged_count = 0
-    for backup_file in target.rglob("*.vanguard_backup"):
-        try:
-            backup_file.unlink(missing_ok=True)
-            purged_count += 1
-        except OSError:
-            continue
-            
-    return {"status": "SUCCESS", "files_purged": purged_count}
+    return {
+        "status": "SUCCESS", 
+        "files_purged": purged_count, 
+        "message": message
+    }
 
 @app.post("/api/pipeline/git/create_pr")
 @app.post("/api/git/pr")
