@@ -16,13 +16,14 @@ def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[st
     except ValueError:
         rel_path = file_abs.lstrip("/")
 
+    # Multi-line scope parsing
     file_line_range = raw_check.get("file_line_range", [0, 0])
-    line_num = file_line_range[0] if file_line_range else 0
+    start_line = file_line_range[0] if file_line_range else 0
+    end_line = file_line_range[1] if file_line_range and len(file_line_range) > 1 else start_line
 
     rule_id = str(raw_check.get("check_id", "UNKNOWN_RULE"))
     code_block = raw_check.get("code_block", "")
 
-    # Look up remediation search pattern to locate the exact line of the finding
     config = load_config()
     template = config.get("remediation_templates", {}).get(rule_id, {})
     search_pattern = template.get("search_pattern")
@@ -51,10 +52,14 @@ def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[st
         code_snippet_str = str(code_block)
 
     if precise_line is not None and precise_line > 0:
-        line_num = precise_line
+        start_line = precise_line
 
+    # Dynamic Severity Extraction
     raw_sev = raw_check.get("severity")
-    severity = str(raw_sev).capitalize() if raw_sev and str(raw_sev).lower() != "none" else "Medium"
+    if not raw_sev:
+        raw_sev = raw_check.get("check_result", {}).get("severity")
+        
+    severity = str(raw_sev).upper() if raw_sev and str(raw_sev).lower() != "none" else "MEDIUM"
 
     return {
         "FindingId": f"fnd_{uuid.uuid4().hex[:8]}",
@@ -62,7 +67,9 @@ def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[st
         "RuleTitle": str(raw_check.get("check_name", "Unspecified Configuration Issue")),
         "Severity": severity,
         "FilePath": rel_path,
-        "LineNumber": int(line_num),
+        "LineNumber": int(start_line),
+        "StartLine": int(start_line),
+        "EndLine": int(end_line),
         "Status": "VULNERABLE",
         "CodeSnippet": code_snippet_str,
         "RemediationHint": str(raw_check.get("guideline", "Review configuration guidelines."))
