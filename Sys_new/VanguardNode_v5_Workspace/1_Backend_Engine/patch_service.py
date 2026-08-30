@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Any, Tuple, List, Optional
 from risk_engine import load_config
 
+
 def resolve_adaptive_range(lines: List[str], line_num: int, default_padding: int = 25) -> Tuple[int, int]:
     if line_num <= 0 or not lines:
         return 0, len(lines)
@@ -30,6 +31,7 @@ def resolve_adaptive_range(lines: List[str], line_num: int, default_padding: int
     lookback_start = max(0, start_idx - 10)
     return lookback_start, end_idx
 
+
 def create_backup(file_path: Path) -> Path:
     backup_path = file_path.with_name(file_path.name + ".vanguard_backup")
     if backup_path.exists():
@@ -40,10 +42,30 @@ def create_backup(file_path: Path) -> Path:
     except Exception as e:
         raise RuntimeError(f"FATAL: Backup creation failed for {file_path}. Aborting patch. Error: {e}")
 
+
 def get_remediation_template(rule_id: str) -> Optional[Dict[str, Any]]:
     config = load_config()
     templates = config.get("remediation_templates", {})
     return templates.get(rule_id)
+
+
+def _already_applied(patch_text: str, file_content: str) -> bool:
+    """
+    Detects whether a given remediation has already been written to the file.
+    """
+    if not re.search(r'\\\d', patch_text):
+        return patch_text.strip() in file_content
+
+
+    decoded = patch_text.replace('\\n', '\n').replace('\\t', '\t')
+
+    tail = re.split(r'\\\d+', decoded)[-1]
+    if '\n' in tail:
+        tail = tail.split('\n', 1)[1]
+    tail = tail.strip()
+
+    return bool(tail) and tail in file_content
+
 
 def apply_patch(
     target_dir: str,
@@ -75,17 +97,11 @@ def apply_patch(
 
     lines = file_content.splitlines(keepends=True)
     patch_applied = False
-    
-    patch_signature = "[VANGUARD NANO-PATCH APPLIED]"
-
-    # Idempotency guard 
-    def _already_applied(content: str) -> bool:
-        return patch_signature in content and rule_id in content # Can be adjusted for robustness. Alternatively, if the specific patch payload is in content.
-    
-    if patch_signature in file_content and template.get("patch_text", "").strip() in file_content:
-        return True, f"File {file_path_rel} is already patched."
 
     if "search_pattern" in template:
+        if _already_applied(template["patch_text"], file_content):
+            return True, f"File {file_path_rel} is already patched for {rule_id}."
+
         flags = re.MULTILINE | re.DOTALL
         pattern = re.compile(template["search_pattern"], flags=flags)
         
@@ -95,18 +111,34 @@ def apply_patch(
             lines = new_file_content.splitlines(keepends=True)
             patch_applied = True
         else:
-            # Fallback for Missing Attribute Findings
+            # 2. FALLBACK: the attribute the rule cares about isn't present in the
             patch_text = template["patch_text"]
-            # Ensure it's a plain literal line and doesn't contain backreferences (e.g. \1)
-            if r'\1' not in patch_text:
-                start_idx, end_idx = resolve_adaptive_range(lines, line_num)
-                # Attempt to inject it cleanly at the end of the resolved block
-                if end_idx > 0:
-                    inject_idx = max(0, end_idx - 1)
-                    lines.insert(inject_idx, f"  {patch_text}\n")
+            has_backreference = bool(re.search(r'\\\d', patch_text))
+
+            if not has_backreference and line_num > 0 and lines:
+                block_start, block_end = resolve_adaptive_range(lines, line_num)
+
+                # Locate the actual opening brace of the block at/after line_num
+                insert_idx = None
+                for idx in range(max(0, line_num - 1), min(block_end, len(lines))):
+                    if "{" in lines[idx]:
+                        insert_idx = idx + 1
+                        break
+
+                if insert_idx is not None:
+                    if _already_applied(patch_text, file_content):
+                        return True, f"File {file_path_rel} is already patched for {rule_id}."
+
+                    # Match indentation of the block's opening line for tidy output
+                    opener = lines[insert_idx - 1]
+                    indent = opener[:len(opener) - len(opener.lstrip())] + "  "
+                    lines.insert(insert_idx, f"{indent}{patch_text.strip()}\n")
                     patch_applied = True
 
     elif template.get("action") in ("insert_healthcheck", "insert_user"):
+        if "[VANGUARD NANO-PATCH APPLIED]" in file_content:
+            return True, f"File {file_path_rel} is already patched."
+
         for i, line in enumerate(lines):
             clean_line = line.strip().upper()
             if clean_line.startswith("CMD") or clean_line.startswith("ENTRYPOINT"):
@@ -132,6 +164,7 @@ def apply_patch(
         return False, f"Failed to write patched file: {e}"
 
     return True, f"Successfully patched {rule_id}"
+
 
 def execute_rollback(target_dir: str, file_path_rel: str) -> dict:
     base_dir = Path(target_dir).resolve()

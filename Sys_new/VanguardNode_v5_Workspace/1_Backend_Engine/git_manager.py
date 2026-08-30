@@ -24,21 +24,21 @@ def create_remediation_pr(repo_path: str, scan_id: str, compliance_score: int):
             repo.index.add(["README.md"])
             repo.index.commit("Initial commit by Vanguard Engine")
 
-        # 4. Generate unique branch name and checkout safely off a stable base
+        # 4. Return to the repo's primary branch first, so each remediation PR
+        if repo.heads:
+            primary = repo.heads[0]
+            for candidate in ("main", "master"):
+                if candidate in repo.heads:
+                    primary = repo.heads[candidate]
+                    break
+            primary.checkout()
+
+        # 5. Generate unique branch name and checkout safely
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         clean_scan_id = scan_id.replace(" ", "_") if scan_id else "manual"
         branch_name = f"security/vanguard-remediation-{clean_scan_id}-{timestamp}"
 
-        # Try to branch off main/master if they exist, otherwise use current head
-        base_ref = None
-        if "main" in repo.heads:
-            base_ref = repo.heads.main
-        elif "master" in repo.heads:
-            base_ref = repo.heads.master
-        else:
-            base_ref = repo.head.reference
-
-        new_branch = repo.create_head(branch_name, commit=base_ref)
+        new_branch = repo.create_head(branch_name)
         new_branch.checkout()
 
         # 5. Stage untracked and modified files
