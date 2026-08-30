@@ -69,7 +69,6 @@ def apply_patch(
 
     template = get_remediation_template(rule_id)
     if not template:
-        # Safer fallback: appends a manual review flag instead of destructive replacement
         return False, f"No remediation template configured for rule {rule_id}"
 
     try:
@@ -79,71 +78,31 @@ def apply_patch(
         return False, f"Failed to read target file: {e}"
 
     lines = file_content.splitlines(keepends=True)
-
-    if line_range and len(line_range) == 2 and line_range != [0, 0]:
-        start_line_idx, end_line_idx = line_range[0] - 1, line_range[1]
-    elif line_num > 0:
-        start_line_idx, end_line_idx = resolve_adaptive_range(lines, line_num)
-    else:
-        start_line_idx, end_line_idx = 0, len(lines)
-
-    start_line_idx = max(0, start_line_idx)
-    end_line_idx = min(len(lines), end_line_idx)
     patch_applied = False
 
     if "search_pattern" in template:
-        # Implemented Multiline Regex Support
         flags = re.MULTILINE | re.DOTALL
         pattern = re.compile(template["search_pattern"], flags=flags)
         
-        block_text = "".join(lines[start_line_idx:end_line_idx])
-        if pattern.search(block_text):
-            new_block = pattern.sub(template["patch_text"], block_text)
-            # Ensure multi-line string replacement preserves individual line items
-            new_lines = new_block.splitlines(keepends=True)
-            lines[start_line_idx:end_line_idx] = new_lines
+        # 1. Try search on whole file directly to prevent window truncation issues
+        if pattern.search(file_content):
+            new_file_content = pattern.sub(template["patch_text"], file_content, count=1)
+            lines = new_file_content.splitlines(keepends=True)
             patch_applied = True
-            
-        if not patch_applied:
-            full_text = "".join(lines)
-            if pattern.search(full_text):
-                new_full_text = pattern.sub(template["patch_text"], full_text)
-                lines.clear()
-                lines.extend(new_full_text.splitlines(keepends=True))
+
+    elif template.get("action") in ("insert_healthcheck", "insert_user"):
+        if "[VANGUARD NANO-PATCH APPLIED]" in file_content:
+            return True, f"File {file_path_rel} is already patched."
+
+        for i, line in enumerate(lines):
+            clean_line = line.strip().upper()
+            if clean_line.startswith("CMD") or clean_line.startswith("ENTRYPOINT"):
+                lines.insert(i, template["patch_text"])
                 patch_applied = True
-
-    elif template.get("action") == "insert_healthcheck":
-        if "HEALTHCHECK" in file_content or "[VANGUARD NANO-PATCH APPLIED]" in file_content:
-            return True, f"File {file_path_rel} already contains a healthcheck."
-
-        for i in range(start_line_idx, end_line_idx):
-            if i < len(lines):
-                clean_line = lines[i].strip().upper()
-                if clean_line.startswith("CMD") or clean_line.startswith("ENTRYPOINT"):
-                    lines.insert(i, template["patch_text"])
-                    patch_applied = True
-                    break
+                break
 
         if not patch_applied and lines:
-            insert_idx = min(end_line_idx, len(lines))
-            lines.insert(insert_idx, template["patch_text"])
-            patch_applied = True
-
-    elif template.get("action") == "insert_user":
-        if "vanguard_svc" in file_content or "[VANGUARD NANO-PATCH APPLIED]" in file_content:
-            return True, f"File {file_path_rel} is already compliant."
-
-        for i in range(start_line_idx, end_line_idx):
-            if i < len(lines):
-                clean_line = lines[i].strip().upper()
-                if clean_line.startswith("CMD") or clean_line.startswith("ENTRYPOINT"):
-                    lines.insert(i, template["patch_text"])
-                    patch_applied = True
-                    break
-
-        if not patch_applied and lines:
-            insert_idx = min(end_line_idx, len(lines))
-            lines.insert(insert_idx, template["patch_text"])
+            lines.append(template["patch_text"])
             patch_applied = True
 
     if not patch_applied:
@@ -157,7 +116,7 @@ def apply_patch(
         backup_path = file_path.with_name(file_path.name + ".vanguard_backup")
         if backup_path.exists():
             shutil.copy2(backup_path, file_path)
-        return False, f"Failed to write patched file. Rolled back. Error: {e}"
+        return False, f"Failed to write patched file: {e}"
 
     return True, f"Successfully patched {rule_id}"
 
