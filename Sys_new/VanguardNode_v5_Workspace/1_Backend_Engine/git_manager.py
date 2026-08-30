@@ -16,7 +16,7 @@ def create_remediation_pr(repo_path: str, scan_id: str, compliance_score: int):
             repo = git.Repo.init(abs_path)
 
         # 3. Ensure initial commit exists (fixes Unborn Branch error on empty local folders)
-        if not repo.heads and repo.is_empty():
+        if not repo.heads:
             readme_path = os.path.join(abs_path, "README.md")
             if not os.path.exists(readme_path):
                 with open(readme_path, "w") as f:
@@ -24,12 +24,21 @@ def create_remediation_pr(repo_path: str, scan_id: str, compliance_score: int):
             repo.index.add(["README.md"])
             repo.index.commit("Initial commit by Vanguard Engine")
 
-        # 4. Generate unique branch name and checkout safely
+        # 4. Generate unique branch name and checkout safely off a stable base
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         clean_scan_id = scan_id.replace(" ", "_") if scan_id else "manual"
         branch_name = f"security/vanguard-remediation-{clean_scan_id}-{timestamp}"
 
-        new_branch = repo.create_head(branch_name)
+        # Try to branch off main/master if they exist, otherwise use current head
+        base_ref = None
+        if "main" in repo.heads:
+            base_ref = repo.heads.main
+        elif "master" in repo.heads:
+            base_ref = repo.heads.master
+        else:
+            base_ref = repo.head.reference
+
+        new_branch = repo.create_head(branch_name, commit=base_ref)
         new_branch.checkout()
 
         # 5. Stage untracked and modified files
