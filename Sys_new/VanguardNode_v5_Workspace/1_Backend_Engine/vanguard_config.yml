@@ -169,9 +169,9 @@ remediation_templates:
     patch_text: 'enable_key_rotation = true # [VANGUARD NANO-PATCH APPLIED]'
     type: "replace"
 
-  CKV_AWS_163:
-    search_pattern: 'scan_on_push\s*=\s*false'
-    patch_text: 'scan_on_push = true # [VANGUARD NANO-PATCH APPLIED]'
+  CKV_AWS_16:
+    search_pattern: 'storage_encrypted\s*=\s*false'
+    patch_text: 'storage_encrypted = true # [VANGUARD NANO-PATCH APPLIED]'
     type: "replace"
 
   # ==========================================
@@ -238,8 +238,8 @@ remediation_templates:
     type: "replace"
 
   CKV_AWS_226:
-    search_pattern: 'server_side_encryption\s*=\s*false'
-    patch_text: 'server_side_encryption = true # [VANGUARD NANO-PATCH APPLIED]'
+    search_pattern: 'auto_minor_version_upgrade\s*=\s*false'
+    patch_text: 'auto_minor_version_upgrade = true # [VANGUARD NANO-PATCH APPLIED]'
     type: "replace"
 
   CKV_AWS_272:
@@ -261,8 +261,8 @@ remediation_templates:
     type: "replace"
 
   CKV_AWS_118:
-    search_pattern: 'xray_tracing_enabled\s*=\s*false'
-    patch_text: 'xray_tracing_enabled = true # [VANGUARD NANO-PATCH APPLIED]'
+    search_pattern: 'monitoring_interval\s*=\s*0'
+    patch_text: 'monitoring_interval = 60 # [VANGUARD NANO-PATCH APPLIED]'
     type: "replace"
 
   CKV_AWS_132:
