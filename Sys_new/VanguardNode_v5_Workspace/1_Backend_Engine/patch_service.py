@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Dict, Any, Tuple, List, Optional
 from risk_engine import load_config
 
-
 def resolve_adaptive_range(lines: List[str], line_num: int, default_padding: int = 25) -> Tuple[int, int]:
     if line_num <= 0 or not lines:
         return 0, len(lines)
@@ -31,7 +30,6 @@ def resolve_adaptive_range(lines: List[str], line_num: int, default_padding: int
     lookback_start = max(0, start_idx - 10)
     return lookback_start, end_idx
 
-
 def create_backup(file_path: Path) -> Path:
     backup_path = file_path.with_name(file_path.name + ".vanguard_backup")
     if backup_path.exists():
@@ -42,12 +40,10 @@ def create_backup(file_path: Path) -> Path:
     except Exception as e:
         raise RuntimeError(f"FATAL: Backup creation failed for {file_path}. Aborting patch. Error: {e}")
 
-
 def get_remediation_template(rule_id: str) -> Optional[Dict[str, Any]]:
     config = load_config()
     templates = config.get("remediation_templates", {})
     return templates.get(rule_id)
-
 
 def apply_patch(
     target_dir: str,
@@ -79,6 +75,15 @@ def apply_patch(
 
     lines = file_content.splitlines(keepends=True)
     patch_applied = False
+    
+    patch_signature = "[VANGUARD NANO-PATCH APPLIED]"
+
+    # Idempotency guard 
+    def _already_applied(content: str) -> bool:
+        return patch_signature in content and rule_id in content # Can be adjusted for robustness. Alternatively, if the specific patch payload is in content.
+    
+    if patch_signature in file_content and template.get("patch_text", "").strip() in file_content:
+        return True, f"File {file_path_rel} is already patched."
 
     if "search_pattern" in template:
         flags = re.MULTILINE | re.DOTALL
@@ -89,11 +94,19 @@ def apply_patch(
             new_file_content = pattern.sub(template["patch_text"], file_content, count=1)
             lines = new_file_content.splitlines(keepends=True)
             patch_applied = True
+        else:
+            # Fallback for Missing Attribute Findings
+            patch_text = template["patch_text"]
+            # Ensure it's a plain literal line and doesn't contain backreferences (e.g. \1)
+            if r'\1' not in patch_text:
+                start_idx, end_idx = resolve_adaptive_range(lines, line_num)
+                # Attempt to inject it cleanly at the end of the resolved block
+                if end_idx > 0:
+                    inject_idx = max(0, end_idx - 1)
+                    lines.insert(inject_idx, f"  {patch_text}\n")
+                    patch_applied = True
 
     elif template.get("action") in ("insert_healthcheck", "insert_user"):
-        if "[VANGUARD NANO-PATCH APPLIED]" in file_content:
-            return True, f"File {file_path_rel} is already patched."
-
         for i, line in enumerate(lines):
             clean_line = line.strip().upper()
             if clean_line.startswith("CMD") or clean_line.startswith("ENTRYPOINT"):
@@ -119,7 +132,6 @@ def apply_patch(
         return False, f"Failed to write patched file: {e}"
 
     return True, f"Successfully patched {rule_id}"
-
 
 def execute_rollback(target_dir: str, file_path_rel: str) -> dict:
     base_dir = Path(target_dir).resolve()
