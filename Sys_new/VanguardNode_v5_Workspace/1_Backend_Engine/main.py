@@ -428,46 +428,43 @@ async def verify_delta_scan(req: PipelineRunRequest):
     pre_risk = baseline_scan.get("r_global", 0.0) if baseline_scan else 0.0
     baseline_findings = baseline_scan.get("findings", []) if baseline_scan else []
 
-    # Run live Checkov scan with PATH and sys.executable fallback
+    # Run live Checkov scan using centralized parser
     try:
-        checkov_bin = shutil.which("checkov")
-        cmd = [checkov_bin, "-d", req.target_dir, "-o", "json"] if checkov_bin else [sys.executable, "-m", "checkov.main", "-d", req.target_dir, "-o", "json"]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        
-        try:
-            parsed_output = json.loads(result.stdout)
-        except json.JSONDecodeError:
-            parsed_output = {}
-
-        # Handle Checkov returning a list (multi-framework) or a dict (single-framework)
-        findings = []
-        if isinstance(parsed_output, list):
-            for framework in parsed_output:
-                findings.extend(framework.get("results", {}).get("failed_checks", []))
-        else:
-            findings = parsed_output.get("results", {}).get("failed_checks", [])
-
+        raw_scan = run_checkov_scan(req.target_dir)
+        flat_findings = raw_scan.get("Findings", [])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Scanner execution failed: {str(e)}")
         
     # Calculate live risk scores dynamically
-    risk_data = calculate_risk(findings)
+    risk_data = calculate_risk(flat_findings)
     post_risk = risk_data.get("R_global", 0.0)
     
-    compliance_score = max(0, 100 - int(post_risk))
+    # Dynamic compliance score based on relative risk reduction delta
+    if post_risk == 0.0:
+        compliance_score = 100
+    elif pre_risk > 0.0:
+        risk_reduction = pre_risk - post_risk
+        compliance_score = max(0, min(100, int(round((risk_reduction / pre_risk) * 100))))
+    else:
+        compliance_score = max(0, 100 - int(post_risk))
 
-    # Calculate dynamic resolved counts by comparing baseline IDs against current scan
-    current_finding_ids = {f.get("check_id") for f in findings if f.get("check_id")}
+    # Calculate dynamic resolved counts by comparing baseline against current scan
+    current_rule_file_pairs = {
+        (f.get("rule_id") or f.get("RuleId"), sanitize_file_path(f.get("file_path") or f.get("FilePath") or ""))
+        for f in flat_findings
+    }
+    current_rule_ids = {f.get("rule_id") or f.get("RuleId") for f in flat_findings}
     
     critical_resolved = 0
     high_resolved = 0
     
     for base_f in baseline_findings:
-        b_id = base_f.get("finding_id") or base_f.get("rule_id")
+        b_rule_id = base_f.get("rule_id") or base_f.get("RuleId")
+        b_file_path = sanitize_file_path(base_f.get("file_path") or base_f.get("FilePath") or "")
         b_sev = str(base_f.get("severity", "")).upper()
         
-        if b_id and b_id not in current_finding_ids:
+        is_still_present = (b_rule_id, b_file_path) in current_rule_file_pairs if b_file_path else (b_rule_id in current_rule_ids)
+        if b_rule_id and not is_still_present:
             if b_sev == "CRITICAL":
                 critical_resolved += 1
             elif b_sev == "HIGH":
@@ -475,10 +472,10 @@ async def verify_delta_scan(req: PipelineRunRequest):
 
     # Format findings array safely to prevent KeyErrors
     triage_logs = [{
-        "FindingId": f.get("check_id", "UNKNOWN_RULE"), 
-        "Severity": (f.get("severity") or "HIGH").upper(), 
-        "FilePath": sanitize_file_path(f.get("file_path", ""))
-    } for f in findings]
+        "FindingId": f.get("rule_id") or f.get("RuleId") or "UNKNOWN_RULE", 
+        "Severity": (f.get("severity") or f.get("Severity") or "HIGH").upper(), 
+        "FilePath": sanitize_file_path(f.get("file_path") or f.get("FilePath") or "")
+    } for f in flat_findings]
     
     event_store.log_post_scan(req.scan_id, pre_risk, post_risk, triage_logs)
     

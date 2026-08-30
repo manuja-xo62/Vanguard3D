@@ -8,6 +8,39 @@ from pathlib import Path
 from typing import Dict, List, Any
 from risk_engine import load_config
 
+_CRITICAL_KEYWORDS = (
+    "public", "publicly accessible", "0.0.0.0/0", "::/0", "open to the world",
+    "unrestricted ingress", "unrestricted egress", "anonymous access",
+    "any source", "any principal", "full access", "administrator access",
+)
+_HIGH_KEYWORDS = (
+    "unencrypted", "not encrypted", "encryption is not", "plaintext",
+    "plain text", "hardcoded", "hard-coded", "secret", "root user",
+    "runs as root", "privileged", "wildcard", "mfa", "multi-factor",
+    "password policy", "iam database authentication",
+)
+_LOW_KEYWORDS = (
+    "logging", "monitoring", "versioning", "tag", "naming", "deletion protection",
+    "backup", "maintenance window", "auto minor version", "description",
+)
+
+
+def infer_severity(rule_id: str, check_name: str, guideline: str = "") -> str:
+    """Best-effort local severity classification for rules Checkov itself
+    (and any config override) doesn't already have a severity for."""
+    overrides = load_config().get("severity_overrides", {})
+    if rule_id in overrides:
+        return str(overrides[rule_id]).upper()
+
+    text = f"{check_name} {guideline}".lower()
+    if any(k in text for k in _CRITICAL_KEYWORDS):
+        return "CRITICAL"
+    if any(k in text for k in _HIGH_KEYWORDS):
+        return "HIGH"
+    if any(k in text for k in _LOW_KEYWORDS):
+        return "LOW"
+    return "MEDIUM"
+
 
 def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[str, Any]:
     file_abs = raw_check.get("file_path", "")
@@ -54,12 +87,18 @@ def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[st
     if precise_line is not None and precise_line > 0:
         start_line = precise_line
 
-    # Dynamic Severity Extraction
     raw_sev = raw_check.get("severity")
     if not raw_sev:
         raw_sev = raw_check.get("check_result", {}).get("severity")
-        
-    severity = str(raw_sev).upper() if raw_sev and str(raw_sev).lower() != "none" else "MEDIUM"
+
+    if raw_sev and str(raw_sev).lower() != "none":
+        severity = str(raw_sev).upper()
+    else:
+        severity = infer_severity(
+            rule_id,
+            str(raw_check.get("check_name", "")),
+            str(raw_check.get("guideline", "")),
+        )
 
     return {
         "FindingId": f"fnd_{uuid.uuid4().hex[:8]}",
