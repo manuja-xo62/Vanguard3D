@@ -261,11 +261,8 @@ async def stream_sarif_report(scan_id: str):
 
 @app.post("/api/patch")
 async def apply_single_patch(req: PatchRequest):
-    
-    # Try fetching finding from DB if finding_id is provided
     finding = get_finding_by_id(req.findingId) if req.findingId else None
     
-    # Resolve parameters from DB record first, fallback to incoming request fields
     rule_id = (finding.get("rule_id") if finding else None) or req.ruleId or ""
     line_num = (finding.get("line_number") if finding else None) or req.lineNumber or 0
     raw_file_path = req.filePath or (finding.get("file_path") if finding else None)
@@ -275,10 +272,10 @@ async def apply_single_patch(req: PatchRequest):
     line_range = [start_line, end_line] if start_line and end_line else None
 
     if not file_path:
-        raise HTTPException(status_code=400, detail="Target file path could not be resolved from request or database.")
+        raise HTTPException(status_code=400, detail="Target file path could not be resolved.")
 
-    # Resolve target directory
-    target_dir = req.targetDir
+    # Resolve target directory robustly
+    target_dir = (req.targetDir or "").strip()
     if not target_dir and finding:
         scan_id = req.scanId or finding.get("scan_id")
         if scan_id:
@@ -286,8 +283,7 @@ async def apply_single_patch(req: PatchRequest):
             if scan_data:
                 target_dir = scan_data.get("target_path")
 
-    # Fallback to the most recent scan directory if still unresolved
-    if not target_dir:
+    if not target_dir or target_dir == ".":
         all_scans = get_all_scans()
         if all_scans:
             target_dir = all_scans[0].get("target_path", ".")
@@ -514,6 +510,7 @@ async def purge_backups_endpoint(req: Optional[PurgeRequest] = None, target_dir:
 @app.post("/api/pipeline/git/create_pr")
 @app.post("/api/git/pr")
 async def trigger_pr(req: GitPRRequest):
+    target_dir = req.resolved_target_dir()
     baseline_scan = get_scan_by_id(req.scanId) if req.scanId else None
     
     if baseline_scan:
@@ -522,7 +519,7 @@ async def trigger_pr(req: GitPRRequest):
     else:
         compliance_score = 100
 
-    result = git_manager.create_remediation_pr(req.targetDir, req.scanId, compliance_score)
+    result = git_manager.create_remediation_pr(target_dir, req.scanId, compliance_score)
     
     if result.get("status") != "SUCCESS":
         raise HTTPException(status_code=400, detail=result.get("error", "Git PR creation failed"))
