@@ -587,6 +587,8 @@ remediation_templates:
     patch_text: 'RUN \1 # [VANGUARD NANO-PATCH APPLIED - SUDO REMOVED]'
     type: "replace"
 
+
+#Severity mapping 
 severity_overrides:
   CKV_AWS_20: CRITICAL     # S3 bucket ACL set to public-read
   CKV_AWS_53: CRITICAL     # S3 public access block - block public ACLs

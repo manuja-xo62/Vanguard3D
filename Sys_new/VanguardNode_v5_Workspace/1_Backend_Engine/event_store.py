@@ -43,7 +43,8 @@ def init_db():
         code_snippet TEXT,
         remediation_hint TEXT,
         r_file REAL DEFAULT 0.0,
-        status TEXT DEFAULT 'VULNERABLE'
+        status TEXT DEFAULT 'VULNERABLE',
+        evaluated_keys TEXT DEFAULT '[]'
     );
 
     CREATE TABLE IF NOT EXISTS patch_events (
@@ -84,6 +85,12 @@ def init_db():
     """)
 
     conn.commit()
+    try:
+        cursor.execute("ALTER TABLE findings ADD COLUMN evaluated_keys TEXT DEFAULT '[]'")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # column already exists
+
     conn.close()
 
 
@@ -137,15 +144,17 @@ def record_scan(
         hint = f.get("RemediationHint") or f.get("remediation_hint", "")
         stat = f.get("Status") or f.get("status", "VULNERABLE")
         r_file = f.get("R_file", f.get("r_file", 0.0))
+        eval_keys = f.get("EvaluatedKeys", f.get("evaluated_keys", []))
+        eval_keys_json = json.dumps(eval_keys) if eval_keys else "[]"
 
         cursor.execute(
             """
             INSERT OR REPLACE INTO findings 
             (finding_id, scan_id, file_path, rule_id, rule_title, severity, 
-             resource_type, line_number, code_snippet, remediation_hint, r_file, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             resource_type, line_number, code_snippet, remediation_hint, r_file, status, evaluated_keys)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (f_id, scan_id, file_p, r_id, r_title, sev, res_type, line_num, snippet, hint, r_file, stat)
+            (f_id, scan_id, file_p, r_id, r_title, sev, res_type, line_num, snippet, hint, r_file, stat, eval_keys_json)
         )
 
     conn.commit()

@@ -55,6 +55,7 @@ class PatchRequest(BaseModel):
     targetDir: Optional[str] = Field(None, alias="target_dir")
     filePath: Optional[str] = Field(None, alias="file_path")
     ruleId: Optional[str] = Field(None, alias="rule_id")
+    ruleTitle: Optional[str] = Field(None, alias="rule_title")
     lineNumber: Optional[int] = Field(0, alias="line_number")
     startLine: Optional[int] = Field(None, alias="start_line")
     endLine: Optional[int] = Field(None, alias="end_line")
@@ -264,12 +265,20 @@ async def apply_single_patch(req: PatchRequest):
     finding = get_finding_by_id(req.findingId) if req.findingId else None
     
     rule_id = (finding.get("rule_id") if finding else None) or req.ruleId or ""
+    rule_title = (finding.get("rule_title") if finding else None) or req.ruleTitle or ""
     line_num = (finding.get("line_number") if finding else None) or req.lineNumber or 0
     raw_file_path = req.filePath or (finding.get("file_path") if finding else None)
     file_path = sanitize_file_path(raw_file_path or "")
     start_line = (finding.get("start_line") if finding else None) or req.startLine or 0
     end_line = (finding.get("end_line") if finding else None) or req.endLine or 0
     line_range = [start_line, end_line] if start_line and end_line else None
+
+    evaluated_keys = []
+    if finding and finding.get("evaluated_keys"):
+        try:
+            evaluated_keys = json.loads(finding["evaluated_keys"])
+        except (TypeError, json.JSONDecodeError):
+            evaluated_keys = []
 
     if not file_path:
         raise HTTPException(status_code=400, detail="Target file path could not be resolved.")
@@ -295,7 +304,9 @@ async def apply_single_patch(req: PatchRequest):
         file_path_rel=file_path,
         rule_id=rule_id,
         line_num=line_num,
-        line_range=line_range
+        line_range=line_range,
+        rule_title=rule_title,
+        evaluated_keys=evaluated_keys
     )
 
     if not success:
@@ -317,9 +328,17 @@ async def apply_batch_patch_endpoint(req: BatchPatchRequest):
         finding = get_finding_by_id(item.findingId) if item.findingId else None
         line_num = (finding.get("line_number", 0) if finding else 0) or item.lineNumber or 0
         rule_id = (finding.get("rule_id", "") if finding else "") or item.ruleId or ""
+        rule_title = (finding.get("rule_title", "") if finding else "") or item.ruleTitle or ""
         start_line = (finding.get("start_line", 0) if finding else 0) or getattr(item, "startLine", 0)
         end_line = (finding.get("end_line", 0) if finding else 0) or getattr(item, "endLine", 0)
         line_range = [start_line, end_line] if start_line and end_line else None
+
+        evaluated_keys = []
+        if finding and finding.get("evaluated_keys"):
+            try:
+                evaluated_keys = json.loads(finding["evaluated_keys"])
+            except (TypeError, json.JSONDecodeError):
+                evaluated_keys = []
         
         raw_file_path = item.filePath or (finding.get("file_path") if finding else None)
         file_path = sanitize_file_path(raw_file_path or "")
@@ -338,6 +357,8 @@ async def apply_batch_patch_endpoint(req: BatchPatchRequest):
                 "line_num": line_num,
                 "line_range": line_range,
                 "rule_id": rule_id,
+                "rule_title": rule_title,
+                "evaluated_keys": evaluated_keys,
                 "file_path": file_path,
                 "target_dir": target_dir,
                 "item": item
@@ -360,7 +381,9 @@ async def apply_batch_patch_endpoint(req: BatchPatchRequest):
                 target_dir=t_dir,
                 file_path_rel=f_path,
                 rule_id=patch_info["rule_id"],
-                line_num=patch_info["line_num"]
+                line_num=patch_info["line_num"],
+                rule_title=patch_info["rule_title"],
+                evaluated_keys=patch_info["evaluated_keys"]
             )
 
             if success:
@@ -428,43 +451,49 @@ async def verify_delta_scan(req: PipelineRunRequest):
     pre_risk = baseline_scan.get("r_global", 0.0) if baseline_scan else 0.0
     baseline_findings = baseline_scan.get("findings", []) if baseline_scan else []
 
-    # Run live Checkov scan using centralized parser
+    # Run live Checkov scan with PATH and sys.executable fallback
     try:
-        raw_scan = run_checkov_scan(req.target_dir)
-        flat_findings = raw_scan.get("Findings", [])
+        checkov_bin = shutil.which("checkov")
+        cmd = [checkov_bin, "-d", req.target_dir, "-o", "json"] if checkov_bin else [sys.executable, "-m", "checkov.main", "-d", req.target_dir, "-o", "json"]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        
+        try:
+            parsed_output = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            parsed_output = {}
+
+        # Handle Checkov returning a list (multi-framework) or a dict (single-framework)
+        findings = []
+        if isinstance(parsed_output, list):
+            for framework in parsed_output:
+                findings.extend(framework.get("results", {}).get("failed_checks", []))
+        else:
+            findings = parsed_output.get("results", {}).get("failed_checks", [])
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Scanner execution failed: {str(e)}")
         
     # Calculate live risk scores dynamically
-    risk_data = calculate_risk(flat_findings)
+    risk_data = calculate_risk(findings)
     post_risk = risk_data.get("R_global", 0.0)
     
-    # Dynamic compliance score based on relative risk reduction delta
-    if post_risk == 0.0:
-        compliance_score = 100
-    elif pre_risk > 0.0:
-        risk_reduction = pre_risk - post_risk
-        compliance_score = max(0, min(100, int(round((risk_reduction / pre_risk) * 100))))
-    else:
-        compliance_score = max(0, 100 - int(post_risk))
+    compliance_score = max(0, 100 - int(post_risk))
 
-    # Calculate dynamic resolved counts by comparing baseline against current scan
-    current_rule_file_pairs = {
-        (f.get("rule_id") or f.get("RuleId"), sanitize_file_path(f.get("file_path") or f.get("FilePath") or ""))
-        for f in flat_findings
+    current_pairs = {
+        (f.get("check_id"), sanitize_file_path(f.get("file_path", "")))
+        for f in findings if f.get("check_id")
     }
-    current_rule_ids = {f.get("rule_id") or f.get("RuleId") for f in flat_findings}
-    
+
     critical_resolved = 0
     high_resolved = 0
     
     for base_f in baseline_findings:
-        b_rule_id = base_f.get("rule_id") or base_f.get("RuleId")
-        b_file_path = sanitize_file_path(base_f.get("file_path") or base_f.get("FilePath") or "")
+        b_rule = base_f.get("rule_id")
+        b_file = sanitize_file_path(base_f.get("file_path", ""))
         b_sev = str(base_f.get("severity", "")).upper()
         
-        is_still_present = (b_rule_id, b_file_path) in current_rule_file_pairs if b_file_path else (b_rule_id in current_rule_ids)
-        if b_rule_id and not is_still_present:
+        if b_rule and (b_rule, b_file) not in current_pairs:
             if b_sev == "CRITICAL":
                 critical_resolved += 1
             elif b_sev == "HIGH":
@@ -472,10 +501,10 @@ async def verify_delta_scan(req: PipelineRunRequest):
 
     # Format findings array safely to prevent KeyErrors
     triage_logs = [{
-        "FindingId": f.get("rule_id") or f.get("RuleId") or "UNKNOWN_RULE", 
-        "Severity": (f.get("severity") or f.get("Severity") or "HIGH").upper(), 
-        "FilePath": sanitize_file_path(f.get("file_path") or f.get("FilePath") or "")
-    } for f in flat_findings]
+        "FindingId": f.get("check_id", "UNKNOWN_RULE"), 
+        "Severity": (f.get("severity") or "HIGH").upper(), 
+        "FilePath": sanitize_file_path(f.get("file_path", ""))
+    } for f in findings]
     
     event_store.log_post_scan(req.scan_id, pre_risk, post_risk, triage_logs)
     

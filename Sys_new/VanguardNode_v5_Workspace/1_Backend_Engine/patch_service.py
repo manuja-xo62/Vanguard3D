@@ -5,6 +5,66 @@ from pathlib import Path
 from typing import Dict, Any, Tuple, List, Optional
 from risk_engine import load_config
 
+_META_OR_TOO_GENERIC_KEYS = {
+    "resource_type", "type", "kind", "name", "id", "engine", "provider",
+}
+
+_NEGATIVE_PHRASE = re.compile(
+    r'not\s+(be\s+)?enabled|should\s+not|must\s+not|\bdisabled?\b',
+    re.IGNORECASE,
+)
+_POSITIVE_PHRASE = re.compile(
+    r'\benabled\b|\benable\b|\bbe\s+true\b',
+    re.IGNORECASE,
+)
+
+
+def _looks_like_simple_enable_check(rule_title: str) -> bool:
+    """True only for the confident 'ensure X is enabled/true' shape -
+    never for inverted phrasing like 'ensure X is NOT enabled'."""
+    if not rule_title:
+        return False
+    if _NEGATIVE_PHRASE.search(rule_title):
+        return False
+    return bool(_POSITIVE_PHRASE.search(rule_title))
+
+
+def _pick_boolean_attribute(rule_title: str, evaluated_keys: List[str]) -> Optional[str]:
+    candidates = []
+    for raw_key in evaluated_keys or []:
+        if "[" in raw_key or "*" in raw_key:
+            continue
+        base = raw_key.split("/")[0].strip()
+        if not base or base in _META_OR_TOO_GENERIC_KEYS:
+            continue
+        if not re.fullmatch(r"[a-z][a-z0-9_]{2,}", base):
+            continue
+        candidates.append(base)
+
+    if not candidates:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+    title_norm = (rule_title or "").lower()
+    matches = [c for c in candidates if c.replace("_", " ") in title_norm]
+    return matches[0] if len(matches) == 1 else None
+
+
+def try_generic_fix(rule_title: str, evaluated_keys: List[str]) -> Optional[Dict[str, str]]:
+    if not _looks_like_simple_enable_check(rule_title):
+        return None
+
+    key = _pick_boolean_attribute(rule_title, evaluated_keys)
+    if not key:
+        return None
+
+    patch_text = f'{key} = true # [VANGUARD AUTO-PATCH APPLIED - AUTO-GENERATED, PLEASE VERIFY]'
+    return {
+        "search_pattern": rf'{re.escape(key)}\s*=\s*false',
+        "patch_text": patch_text,
+        "type": "auto_generated",
+    }
+
 
 def resolve_adaptive_range(lines: List[str], line_num: int, default_padding: int = 25) -> Tuple[int, int]:
     if line_num <= 0 or not lines:
@@ -56,9 +116,7 @@ def _already_applied(patch_text: str, file_content: str) -> bool:
     if not re.search(r'\\\d', patch_text):
         return patch_text.strip() in file_content
 
-
     decoded = patch_text.replace('\\n', '\n').replace('\\t', '\t')
-
     tail = re.split(r'\\\d+', decoded)[-1]
     if '\n' in tail:
         tail = tail.split('\n', 1)[1]
@@ -72,7 +130,9 @@ def apply_patch(
     file_path_rel: str,
     rule_id: str,
     line_range: Optional[List[int]] = None,
-    line_num: int = 0
+    line_num: int = 0,
+    rule_title: str = "",
+    evaluated_keys: Optional[List[str]] = None
 ) -> Tuple[bool, str]:
     target_path = Path(target_dir).resolve()
     file_path = (target_path / file_path_rel.lstrip("\\/")).resolve()
@@ -86,8 +146,15 @@ def apply_patch(
         return False, f"File not found: {file_path}"
 
     template = get_remediation_template(rule_id)
+    auto_generated = False
     if not template:
-        return False, f"No remediation template configured for rule {rule_id}"
+        template = try_generic_fix(rule_title, evaluated_keys or [])
+        if not template:
+            return False, (
+                f"No remediation template configured for rule {rule_id}, and Vanguard "
+                f"couldn't confidently auto-generate one (needs manual review)."
+            )
+        auto_generated = True
 
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -163,6 +230,8 @@ def apply_patch(
             shutil.copy2(backup_path, file_path)
         return False, f"Failed to write patched file: {e}"
 
+    if auto_generated:
+        return True, f"Successfully patched {rule_id} (auto-generated fix - please review the change)"
     return True, f"Successfully patched {rule_id}"
 
 

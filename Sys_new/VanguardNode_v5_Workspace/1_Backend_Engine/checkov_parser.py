@@ -26,8 +26,7 @@ _LOW_KEYWORDS = (
 
 
 def infer_severity(rule_id: str, check_name: str, guideline: str = "") -> str:
-    """Best-effort local severity classification for rules Checkov itself
-    (and any config override) doesn't already have a severity for."""
+    """Best-effort local severity classification for rules Checkov itself doesn't already have a severity for."""
     overrides = load_config().get("severity_overrides", {})
     if rule_id in overrides:
         return str(overrides[rule_id]).upper()
@@ -87,6 +86,7 @@ def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[st
     if precise_line is not None and precise_line > 0:
         start_line = precise_line
 
+    # Dynamic Severity Extraction.
     raw_sev = raw_check.get("severity")
     if not raw_sev:
         raw_sev = raw_check.get("check_result", {}).get("severity")
@@ -100,6 +100,8 @@ def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[st
             str(raw_check.get("guideline", "")),
         )
 
+    evaluated_keys = raw_check.get("check_result", {}).get("evaluated_keys") or []
+
     return {
         "FindingId": f"fnd_{uuid.uuid4().hex[:8]}",
         "RuleId": rule_id,
@@ -111,7 +113,8 @@ def parse_checkov_finding(raw_check: Dict[str, Any], target_dir: str) -> Dict[st
         "EndLine": int(end_line),
         "Status": "VULNERABLE",
         "CodeSnippet": code_snippet_str,
-        "RemediationHint": str(raw_check.get("guideline", "Review configuration guidelines."))
+        "RemediationHint": str(raw_check.get("guideline", "Review configuration guidelines.")),
+        "EvaluatedKeys": evaluated_keys
     }
 
 
