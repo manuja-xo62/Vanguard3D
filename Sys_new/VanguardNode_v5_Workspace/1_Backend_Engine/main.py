@@ -19,7 +19,7 @@ from event_store import (
     record_training_attempt, record_patch_event, get_finding_by_id,
     get_all_scans
 )
-from checkov_parser import run_checkov_scan
+from checkov_parser import run_checkov_scan, infer_severity
 from risk_engine import calculate_risk
 from patch_service import apply_patch, execute_rollback
 from report_generator import generate_pdf_report
@@ -156,6 +156,7 @@ async def execute_scan(req: Optional[ScanRequest] = None, target_dir: Optional[s
             line_num = finding.get("LineNumber") or finding.get("line_number", 0)
             snippet = finding.get("CodeSnippet") or finding.get("code_snippet", "")
             hint = finding.get("RemediationHint") or finding.get("remediation_hint", "")
+            eval_keys = finding.get("EvaluatedKeys") or finding.get("evaluated_keys", [])
 
             flat_findings.append({
                 "findingId": f_id,
@@ -174,6 +175,8 @@ async def execute_scan(req: Optional[ScanRequest] = None, target_dir: Optional[s
                 "code_snippet": snippet,
                 "remediationHint": hint,
                 "remediation_hint": hint,
+                "evaluatedKeys": eval_keys,
+                "evaluated_keys": eval_keys,
                 "computed_score": finding.get("computed_score", 0),
                 "exposure": finding.get("exposure", "internal_only"),
                 "r_file": finding.get("r_file", 0.0)
@@ -454,7 +457,7 @@ async def verify_delta_scan(req: PipelineRunRequest):
     # Run live Checkov scan with PATH and sys.executable fallback
     try:
         checkov_bin = shutil.which("checkov")
-        cmd = [checkov_bin, "-d", req.target_dir, "-o", "json"] if checkov_bin else [sys.executable, "-m", "checkov.main", "-d", req.target_dir, "-o", "json"]
+        cmd = [checkov_bin, "-d", req.target_dir, "-o", "json", "--quiet", "--skip-path", "vanguard_backup"] if checkov_bin else [sys.executable, "-m", "checkov.main", "-d", req.target_dir, "-o", "json", "--quiet", "--skip-path", "vanguard_backup"]
         
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         
@@ -501,8 +504,12 @@ async def verify_delta_scan(req: PipelineRunRequest):
 
     # Format findings array safely to prevent KeyErrors
     triage_logs = [{
-        "FindingId": f.get("check_id", "UNKNOWN_RULE"), 
-        "Severity": (f.get("severity") or "HIGH").upper(), 
+        "FindingId": f.get("check_id", "UNKNOWN_RULE"),
+        "Severity": infer_severity(
+            f.get("check_id", ""),
+            str(f.get("check_name", "")),
+            str(f.get("guideline", "")),
+        ),
         "FilePath": sanitize_file_path(f.get("file_path", ""))
     } for f in findings]
     

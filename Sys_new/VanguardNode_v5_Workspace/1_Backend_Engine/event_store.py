@@ -85,6 +85,7 @@ def init_db():
     """)
 
     conn.commit()
+
     try:
         cursor.execute("ALTER TABLE findings ADD COLUMN evaluated_keys TEXT DEFAULT '[]'")
         conn.commit()

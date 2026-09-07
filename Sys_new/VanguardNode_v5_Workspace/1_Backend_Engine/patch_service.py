@@ -30,6 +30,9 @@ def _looks_like_simple_enable_check(rule_title: str) -> bool:
 
 
 def _pick_boolean_attribute(rule_title: str, evaluated_keys: List[str]) -> Optional[str]:
+    """Pick the single evaluated_key that plausibly maps to a scalar
+    boolean HCL/YAML attribute we can safely flip to true. Returns None
+    whenever there's genuine ambiguity, rather than guessing."""
     candidates = []
     for raw_key in evaluated_keys or []:
         if "[" in raw_key or "*" in raw_key:
@@ -45,6 +48,7 @@ def _pick_boolean_attribute(rule_title: str, evaluated_keys: List[str]) -> Optio
         return None
     if len(candidates) == 1:
         return candidates[0]
+
     title_norm = (rule_title or "").lower()
     matches = [c for c in candidates if c.replace("_", " ") in title_norm]
     return matches[0] if len(matches) == 1 else None
@@ -172,13 +176,13 @@ def apply_patch(
         flags = re.MULTILINE | re.DOTALL
         pattern = re.compile(template["search_pattern"], flags=flags)
         
-        # 1. Try search on whole file directly to prevent window truncation issues
+        # Try search on whole file directly to prevent window truncation issues
         if pattern.search(file_content):
             new_file_content = pattern.sub(template["patch_text"], file_content, count=1)
             lines = new_file_content.splitlines(keepends=True)
             patch_applied = True
         else:
-            # 2. FALLBACK: the attribute the rule cares about isn't present in the
+            # FALLBACK: the attribute the rule cares about isn't present in the
             patch_text = template["patch_text"]
             has_backreference = bool(re.search(r'\\\d', patch_text))
 

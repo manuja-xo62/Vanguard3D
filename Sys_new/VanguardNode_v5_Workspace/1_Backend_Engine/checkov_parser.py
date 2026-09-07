@@ -128,9 +128,9 @@ def run_checkov_scan(target_dir: str) -> Dict[str, Any]:
     checkov_bin = shutil.which("checkov")
 
     if checkov_bin:
-        cmd = [checkov_bin, "-d", target_path_str, "-o", "json", "--quiet"]
+        cmd = [checkov_bin, "-d", target_path_str, "-o", "json", "--quiet", "--skip-path", "vanguard_backup"]
     else:
-        cmd = [sys.executable, "-m", "checkov.main", "-d", target_path_str, "-o", "json", "--quiet"]
+        cmd = [sys.executable, "-m", "checkov.main", "-d", target_path_str, "-o", "json", "--quiet", "--skip-path", "vanguard_backup"]
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", check=False)

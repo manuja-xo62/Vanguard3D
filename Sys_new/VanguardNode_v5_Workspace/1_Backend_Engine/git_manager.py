@@ -15,7 +15,7 @@ def create_remediation_pr(repo_path: str, scan_id: str, compliance_score: int):
         except git.exc.InvalidGitRepositoryError:
             repo = git.Repo.init(abs_path)
 
-        # 3. Ensure initial commit exists (fixes Unborn Branch error on empty local folders)
+        # 3. Ensure initial commit exists
         if not repo.heads:
             readme_path = os.path.join(abs_path, "README.md")
             if not os.path.exists(readme_path):
@@ -25,6 +25,8 @@ def create_remediation_pr(repo_path: str, scan_id: str, compliance_score: int):
             repo.index.commit("Initial commit by Vanguard Engine")
 
         # 4. Return to the repo's primary branch first, so each remediation PR
+        # branches fresh from the main line instead of stacking on top of the
+        # previous remediation branch 
         if repo.heads:
             primary = repo.heads[0]
             for candidate in ("main", "master"):
@@ -52,7 +54,7 @@ def create_remediation_pr(repo_path: str, scan_id: str, compliance_score: int):
             )
             repo.index.commit(commit_message)
 
-        # 7. Safely attempt remote push (Skip if no 'origin' remote exists)
+        # 7. Safely attempt remote push
         pushed_to_remote = False
         if "origin" in [remote.name for remote in repo.remotes]:
             try:
