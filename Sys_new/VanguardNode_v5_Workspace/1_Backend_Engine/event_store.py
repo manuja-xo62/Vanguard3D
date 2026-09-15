@@ -191,14 +191,14 @@ def get_finding_by_id(finding_id: str) -> Optional[Dict[str, Any]]:
     return dict(row) if row else None
 
 
-def record_patch_event(finding_id: str, backup_path: str) -> str:
+def record_patch_event(finding_id: str, backup_path: str, status: str = "PATCHED") -> str:
     init_db()
     conn = get_db_connection()
     cursor = conn.cursor()
     now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
     event_id = f"evt_{uuid.uuid4().hex[:8]}"
 
-    cursor.execute("UPDATE findings SET status = 'PATCHED' WHERE finding_id = ?", (finding_id,))
+    cursor.execute("UPDATE findings SET status = ? WHERE finding_id = ?", (status, finding_id))
     cursor.execute(
         "INSERT OR REPLACE INTO patch_events (event_id, finding_id, backup_path, timestamp) VALUES (?, ?, ?, ?)",
         (event_id, finding_id, backup_path, now_iso)
