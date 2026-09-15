@@ -587,6 +587,7 @@ remediation_templates:
     patch_text: 'RUN \1 # [VANGUARD NANO-PATCH APPLIED - SUDO REMOVED]'
     type: "replace"
 
+# fixing the severity not being shown issue cuz chekhov's free version doesn't supply it for free
 severity_overrides:
   CKV_AWS_20: CRITICAL     # S3 bucket ACL set to public-read
   CKV_AWS_53: CRITICAL     # S3 public access block - block public ACLs
