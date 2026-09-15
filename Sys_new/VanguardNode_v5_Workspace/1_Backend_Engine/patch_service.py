@@ -7,6 +7,7 @@ from risk_engine import load_config
 
 _META_OR_TOO_GENERIC_KEYS = {
     "resource_type", "type", "kind", "name", "id", "engine", "provider",
+    "metadata", "tags", "labels", "properties", "config", "settings",
 }
 
 _NEGATIVE_PHRASE = re.compile(
@@ -30,16 +31,18 @@ def _looks_like_simple_enable_check(rule_title: str) -> bool:
 
 
 def _pick_boolean_attribute(rule_title: str, evaluated_keys: List[str]) -> Optional[str]:
-    """Pick the single evaluated_key that plausibly maps to a scalar
-    boolean HCL/YAML attribute we can safely flip to true. Returns None
-    whenever there's genuine ambiguity, rather than guessing."""
     candidates = []
     for raw_key in evaluated_keys or []:
         if "[" in raw_key or "*" in raw_key:
             continue
-        base = raw_key.split("/")[0].strip()
+
+        segments = raw_key.split("/")
+        base = segments[0].strip()
         if not base or base in _META_OR_TOO_GENERIC_KEYS:
             continue
+        if len(segments) > 1 and any("-" in seg for seg in segments[1:]):
+            continue
+
         if not re.fullmatch(r"[a-z][a-z0-9_]{2,}", base):
             continue
         candidates.append(base)
@@ -48,7 +51,6 @@ def _pick_boolean_attribute(rule_title: str, evaluated_keys: List[str]) -> Optio
         return None
     if len(candidates) == 1:
         return candidates[0]
-
     title_norm = (rule_title or "").lower()
     matches = [c for c in candidates if c.replace("_", " ") in title_norm]
     return matches[0] if len(matches) == 1 else None
@@ -129,6 +131,95 @@ def _already_applied(patch_text: str, file_content: str) -> bool:
     return bool(tail) and tail in file_content
 
 
+def _resolve_current_line(file_content: str, lines: List[str], line_num: int, code_snippet: str) -> int:
+    """
+    Corrects for line drift before inserting anything.
+    """
+    if not code_snippet:
+        return line_num
+
+    anchor = code_snippet.strip().splitlines()[0].strip() if code_snippet.strip() else ""
+    if not anchor:
+        return line_num
+
+    matches = [i for i, line in enumerate(lines) if line.strip() == anchor]
+    if len(matches) == 1:
+        return matches[0] + 1  # convert 0-indexed back to 1-indexed line_num
+    return line_num
+
+# Manual-review annotation for anything that can't be safely auto-patched.
+
+REVIEW_TAG = "[VANGUARD REVIEW NEEDED]"
+
+
+def _build_review_comment(rule_id: str, rule_title: str, remediation_hint: str, indent: str) -> str:
+    hint = (remediation_hint or "").strip()
+    if not hint or hint.lower() == "none":
+        hint = f"No guidance provided by Checkov for this rule - search checkov.io or the Checkov GitHub repo for '{rule_id}'."
+    hint = " ".join(hint.split())
+    if len(hint) > 200:
+        hint = hint[:197] + "..."
+
+    title = (rule_title or "").strip()
+    header = f"{rule_id} ({title})" if title else rule_id
+    return f"{indent}# {REVIEW_TAG} {header}: {hint}\n"
+
+
+def annotate_for_review(
+    target_dir: str,
+    file_path_rel: str,
+    rule_id: str,
+    rule_title: str = "",
+    remediation_hint: str = "",
+    line_num: int = 0,
+    code_snippet: str = ""
+) -> Tuple[bool, str]:
+    target_path = Path(target_dir).resolve()
+    file_path = (target_path / file_path_rel.lstrip("\\/")).resolve()
+
+    try:
+        file_path.relative_to(target_path)
+    except ValueError:
+        return False, "Access denied: Target path escapes base directory."
+
+    if not file_path.exists():
+        return False, f"File not found: {file_path}"
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+    except Exception as e:
+        return False, f"Failed to read target file: {e}"
+
+    if f"{REVIEW_TAG} {rule_id}" in file_content:
+        return True, f"File {file_path_rel} is already flagged for review for {rule_id}."
+
+    lines = file_content.splitlines(keepends=True)
+    if line_num <= 0 or not lines:
+        return False, f"No line reference available to place a review comment for {rule_id}."
+
+    target_line_num = _resolve_current_line(file_content, lines, line_num, code_snippet)
+    insert_idx = max(0, min(target_line_num - 1, len(lines)))
+
+    anchor_line = lines[insert_idx] if insert_idx < len(lines) else (lines[-1] if lines else "")
+    indent = anchor_line[:len(anchor_line) - len(anchor_line.lstrip())]
+
+    comment = _build_review_comment(rule_id, rule_title, remediation_hint, indent)
+    lines.insert(insert_idx, comment)
+
+    try:
+        create_backup(file_path)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.writelines(lines)
+    except Exception as e:
+        backup_path = file_path.with_name(file_path.name + ".vanguard_backup")
+        if backup_path.exists():
+            shutil.copy2(backup_path, file_path)
+        return False, f"Failed to write review comment: {e}"
+
+    return True, f"Flagged {rule_id} for manual review at line {target_line_num} (see inline comment)."
+
+
 def apply_patch(
     target_dir: str,
     file_path_rel: str,
@@ -136,7 +227,8 @@ def apply_patch(
     line_range: Optional[List[int]] = None,
     line_num: int = 0,
     rule_title: str = "",
-    evaluated_keys: Optional[List[str]] = None
+    evaluated_keys: Optional[List[str]] = None,
+    code_snippet: str = ""
 ) -> Tuple[bool, str]:
     target_path = Path(target_dir).resolve()
     file_path = (target_path / file_path_rel.lstrip("\\/")).resolve()
@@ -182,15 +274,17 @@ def apply_patch(
             lines = new_file_content.splitlines(keepends=True)
             patch_applied = True
         else:
+            # Fallback option: the attribute the rule cares about isn't present in the target resource
             patch_text = template["patch_text"]
             has_backreference = bool(re.search(r'\\\d', patch_text))
 
             if not has_backreference and line_num > 0 and lines:
-                block_start, block_end = resolve_adaptive_range(lines, line_num)
+                corrected_line_num = _resolve_current_line(file_content, lines, line_num, code_snippet)
+                block_start, block_end = resolve_adaptive_range(lines, corrected_line_num)
 
-                # Locate the actual opening brace of the block at or after line_num
+                # Locate the actual opening brace of the block at/after corrected_line_num
                 insert_idx = None
-                for idx in range(max(0, line_num - 1), min(block_end, len(lines))):
+                for idx in range(max(0, corrected_line_num - 1), min(block_end, len(lines))):
                     if "{" in lines[idx]:
                         insert_idx = idx + 1
                         break
