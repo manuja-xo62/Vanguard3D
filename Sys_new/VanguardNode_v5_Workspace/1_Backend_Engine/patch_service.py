@@ -182,14 +182,13 @@ def apply_patch(
             lines = new_file_content.splitlines(keepends=True)
             patch_applied = True
         else:
-            # FALLBACK: the attribute the rule cares about isn't present in the
             patch_text = template["patch_text"]
             has_backreference = bool(re.search(r'\\\d', patch_text))
 
             if not has_backreference and line_num > 0 and lines:
                 block_start, block_end = resolve_adaptive_range(lines, line_num)
 
-                # Locate the actual opening brace of the block at/after line_num
+                # Locate the actual opening brace of the block at or after line_num
                 insert_idx = None
                 for idx in range(max(0, line_num - 1), min(block_end, len(lines))):
                     if "{" in lines[idx]:

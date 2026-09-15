@@ -466,7 +466,7 @@ async def verify_delta_scan(req: PipelineRunRequest):
         except json.JSONDecodeError:
             parsed_output = {}
 
-        # Handle Checkov returning a list (multi-framework) or a dict (single-framework)
+        # Handle Checkov returning a list or a dict
         findings = []
         if isinstance(parsed_output, list):
             for framework in parsed_output:
