@@ -5,50 +5,34 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
-
 def generate_pdf_report(scan_data: Dict[str, Any]) -> bytes:
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     story = []
-
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#00E5FF'))
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=11, textColor=colors.gray)
-
-    story.append(Paragraph("VanguardNode 3D - Security Audit Report", style=title_style))
+    story.append(Paragraph('VanguardNode 3D - Security Audit Report', style=title_style))
     story.append(Paragraph(f"Scan ID: {scan_data.get('scan_id', scan_data.get('ScanId', 'N/A'))} | Target: {scan_data.get('target_path', 'N/A')}", subtitle_style))
     story.append(Spacer(1, 18))
-
-    raw_r_global = scan_data.get("r_global", scan_data.get("R_global", 0.0))
+    raw_r_global = scan_data.get('r_global', scan_data.get('R_global', 0.0))
     r_global = float(raw_r_global) if raw_r_global is not None else 0.0
-    summary_text = f"<b>Global Risk Score (R_global):</b> {r_global:.2f}"
+    summary_text = f'<b>Global Risk Score (R_global):</b> {r_global:.2f}'
     story.append(Paragraph(summary_text, styles['Normal']))
     story.append(Spacer(1, 12))
-
-    table_data = [["File Path", "Risk Score (R_file)", "Status"]]
-    findings = scan_data.get("findings", scan_data.get("Findings", []))
-    
+    table_data = [['File Path', 'Risk Score (R_file)', 'Status']]
+    findings = scan_data.get('findings', scan_data.get('Findings', []))
     for f in findings:
-        path = f.get("file_path", f.get("FilePath", f.get("path", "Unknown")))
-        raw_r_file = f.get("R_file", f.get("r_file", 0.0))
+        path = f.get('file_path', f.get('FilePath', f.get('path', 'Unknown')))
+        raw_r_file = f.get('R_file', f.get('r_file', 0.0))
         r_file = float(raw_r_file) if raw_r_file is not None else 0.0
-        status = f.get("status", f.get("Status", "Analyzed"))
-        table_data.append([path, f"{r_file:.2f}", str(status)])
-
+        status = f.get('status', f.get('Status', 'Analyzed'))
+        table_data.append([path, f'{r_file:.2f}', str(status)])
     if len(table_data) == 1:
-        table_data.append(["No findings reported", "0.00", "PASSED"])
-
+        table_data.append(['No findings reported', '0.00', 'PASSED'])
     t = Table(table_data, colWidths=[300, 120, 100])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1E293B')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#334155')),
-    ]))
+    t.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1E293B')), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white), ('ALIGN', (0, 0), (-1, -1), 'LEFT'), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), ('BOTTOMPADDING', (0, 0), (-1, 0), 8), ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#334155'))]))
     story.append(t)
-
     doc.build(story)
     buffer.seek(0)
     return buffer.getvalue()

@@ -2,7 +2,6 @@ import os
 import json
 import asyncio
 import io
-import uvicorn
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -10,590 +9,366 @@ from pydantic import BaseModel, Field, ConfigDict
 import subprocess
 import git_manager
 import event_store
-from pathlib import Path
 import sys
 import shutil
- 
-from event_store import (
-    init_db, record_scan, get_scan_by_id, get_replay_sequence,
-    record_training_attempt, record_patch_event, get_finding_by_id,
-    get_all_scans
-)
+from event_store import init_db, record_scan, get_scan_by_id, get_replay_sequence, record_training_attempt, record_patch_event, get_finding_by_id, get_all_scans
 from checkov_parser import run_checkov_scan, infer_severity
 from risk_engine import calculate_risk
 from patch_service import apply_patch, execute_rollback, annotate_for_review
 from report_generator import generate_pdf_report
 from sarif_generator import generate_sarif_report
 from patch_service import purge_backup_files
- 
-app = FastAPI(title="Vanguard Backend Engine")
+app = FastAPI(title='Vanguard Backend Engine')
 event_queue: asyncio.Queue = asyncio.Queue()
- 
 init_db()
- 
- 
+
 class FindingModel(BaseModel):
-    findingId: str = Field(..., alias="finding_id")
-    filePath: str = Field(..., alias="file_path")
-    lineNumber: int = Field(..., alias="line_number")
-    startLine: Optional[int] = Field(None, alias="start_line")
-    endLine: Optional[int] = Field(None, alias="end_line")
-    ruleId: str = Field(..., alias="rule_id")
-    ruleTitle: Optional[str] = Field("", alias="rule_title")
-    severity: Optional[str] = Field("MEDIUM", alias="severity")
-    status: str = Field("VULNERABLE", alias="status")
-    codeSnippet: Optional[str] = Field("", alias="code_snippet")
-    remediationHint: Optional[str] = Field("", alias="remediation_hint")
-    rFile: float = Field(0.0, alias="r_file")
- 
+    findingId: str = Field(..., alias='finding_id')
+    filePath: str = Field(..., alias='file_path')
+    lineNumber: int = Field(..., alias='line_number')
+    startLine: Optional[int] = Field(None, alias='start_line')
+    endLine: Optional[int] = Field(None, alias='end_line')
+    ruleId: str = Field(..., alias='rule_id')
+    ruleTitle: Optional[str] = Field('', alias='rule_title')
+    severity: Optional[str] = Field('MEDIUM', alias='severity')
+    status: str = Field('VULNERABLE', alias='status')
+    codeSnippet: Optional[str] = Field('', alias='code_snippet')
+    remediationHint: Optional[str] = Field('', alias='remediation_hint')
+    rFile: float = Field(0.0, alias='r_file')
     model_config = ConfigDict(populate_by_name=True)
- 
- 
+
 class PatchRequest(BaseModel):
-    findingId: Optional[str] = Field("", alias="finding_id")
-    scanId: Optional[str] = Field(None, alias="scan_id")
-    targetDir: Optional[str] = Field(None, alias="target_dir")
-    filePath: Optional[str] = Field(None, alias="file_path")
-    ruleId: Optional[str] = Field(None, alias="rule_id")
-    ruleTitle: Optional[str] = Field(None, alias="rule_title")
-    lineNumber: Optional[int] = Field(0, alias="line_number")
-    startLine: Optional[int] = Field(None, alias="start_line")
-    endLine: Optional[int] = Field(None, alias="end_line")
- 
+    findingId: Optional[str] = Field('', alias='finding_id')
+    scanId: Optional[str] = Field(None, alias='scan_id')
+    targetDir: Optional[str] = Field(None, alias='target_dir')
+    filePath: Optional[str] = Field(None, alias='file_path')
+    ruleId: Optional[str] = Field(None, alias='rule_id')
+    ruleTitle: Optional[str] = Field(None, alias='rule_title')
+    lineNumber: Optional[int] = Field(0, alias='line_number')
+    startLine: Optional[int] = Field(None, alias='start_line')
+    endLine: Optional[int] = Field(None, alias='end_line')
     model_config = ConfigDict(populate_by_name=True)
- 
- 
+
 class BatchPatchRequest(BaseModel):
-    targetDir: Optional[str] = Field(None, alias="target_dir")
+    targetDir: Optional[str] = Field(None, alias='target_dir')
     patches: List[PatchRequest]
- 
     model_config = ConfigDict(populate_by_name=True)
- 
- 
+
 class RollbackRequest(BaseModel):
-    targetDir: Optional[str] = Field(None, alias="target_dir")
+    targetDir: Optional[str] = Field(None, alias='target_dir')
     patchId: Optional[str] = None
-    filePath: Optional[str] = Field(None, alias="file_path")
+    filePath: Optional[str] = Field(None, alias='file_path')
     target_file: Optional[str] = None
- 
     model_config = ConfigDict(populate_by_name=True)
- 
- 
+
 class TrainingScoreRequest(BaseModel):
     scenarioId: str
     score: float
     completionTimeSec: float
- 
- 
+
 class ScanRequest(BaseModel):
-    target_directory: Optional[str] = Field(None, alias="target_dir")
+    target_directory: Optional[str] = Field(None, alias='target_dir')
     target_dir: Optional[str] = None
- 
     model_config = ConfigDict(populate_by_name=True)
- 
+
     def resolved_target_dir(self) -> str:
-        path = self.target_directory or self.target_dir or ""
-        return "" if path.strip().lower() in ("", "string") else path.strip()
- 
+        path = self.target_directory or self.target_dir or ''
+        return '' if path.strip().lower() in ('', 'string') else path.strip()
+
 class PipelineRunRequest(BaseModel):
     scan_id: str
     target_dir: str
- 
+
 class GitPRRequest(BaseModel):
-    targetDir: Optional[str] = Field(None, alias="target_dir")
+    targetDir: Optional[str] = Field(None, alias='target_dir')
     target_dir: Optional[str] = None
-    branchName: Optional[str] = Field("security/vanguard-remediation-patch", alias="branch_name")
-    scanId: Optional[str] = Field("scan_manual", alias="scan_id")
- 
+    branchName: Optional[str] = Field('security/vanguard-remediation-patch', alias='branch_name')
+    scanId: Optional[str] = Field('scan_manual', alias='scan_id')
     model_config = ConfigDict(populate_by_name=True)
- 
+
     def resolved_target_dir(self) -> str:
-        return (self.targetDir or self.target_dir or ".").strip()
- 
+        return (self.targetDir or self.target_dir or '.').strip()
+
 class PurgeRequest(BaseModel):
-    targetDir: Optional[str] = Field(None, alias="target_dir")
+    targetDir: Optional[str] = Field(None, alias='target_dir')
     target_dir: Optional[str] = None
- 
     model_config = ConfigDict(populate_by_name=True)
- 
+
     def resolved_target_dir(self) -> str:
-        return (self.targetDir or self.target_dir or ".").strip()
- 
- 
+        return (self.targetDir or self.target_dir or '.').strip()
+
 def sanitize_file_path(path: str) -> str:
     if not path:
-        return ""
-    # Normalize backslashes to forward slashes and strip leading slashes
-    return path.replace("\\", "/").lstrip("/")
- 
- 
-@app.post("/api/scan")
-async def execute_scan(req: Optional[ScanRequest] = None, target_dir: Optional[str] = None):
-    query_dir = target_dir.strip() if (target_dir and target_dir.strip().lower() != "string") else ""
-    body_dir = req.resolved_target_dir() if req else ""
-    
+        return ''
+    return path.replace('\\', '/').lstrip('/')
+
+@app.post('/api/scan')
+async def execute_scan(req: Optional[ScanRequest]=None, target_dir: Optional[str]=None):
+    query_dir = target_dir.strip() if target_dir and target_dir.strip().lower() != 'string' else ''
+    body_dir = req.resolved_target_dir() if req else ''
     effective_dir = query_dir or body_dir
-    
     if not effective_dir:
-        raise HTTPException(status_code=400, detail="Target directory must be provided in request body or query param")
- 
+        raise HTTPException(status_code=400, detail='Target directory must be provided in request body or query param')
     if not os.path.exists(effective_dir):
         raise HTTPException(status_code=404, detail=f"Target directory '{effective_dir}' not found")
- 
     raw_scan = run_checkov_scan(effective_dir)
-    risk_data = calculate_risk(raw_scan.get("Findings", []))
- 
-    scan_id = raw_scan.get("ScanId", f"scan_{os.urandom(4).hex()}")
- 
+    risk_data = calculate_risk(raw_scan.get('Findings', []))
+    scan_id = raw_scan.get('ScanId', f'scan_{os.urandom(4).hex()}')
     flat_findings = []
-    for file_entry in risk_data.get("files", []):
-        for finding in file_entry.get("findings", []):
-            f_id = finding.get("FindingId") or finding.get("finding_id")
-            f_path = sanitize_file_path(finding.get("FilePath") or finding.get("file_path") or "")
-            r_id = finding.get("RuleId") or finding.get("rule_id")
-            r_title = finding.get("RuleTitle") or finding.get("rule_title", "")
-            sev = (finding.get("Severity") or finding.get("severity") or "MEDIUM").upper()
-            line_num = finding.get("LineNumber") or finding.get("line_number", 0)
-            snippet = finding.get("CodeSnippet") or finding.get("code_snippet", "")
-            hint = finding.get("RemediationHint") or finding.get("remediation_hint", "")
-            eval_keys = finding.get("EvaluatedKeys") or finding.get("evaluated_keys", [])
- 
-            flat_findings.append({
-                "findingId": f_id,
-                "finding_id": f_id,
-                "filePath": f_path,
-                "file_path": f_path,
-                "ruleId": r_id,
-                "rule_id": r_id,
-                "ruleTitle": r_title,
-                "rule_title": r_title,
-                "severity": sev,
-                "lineNumber": line_num,
-                "line_number": line_num,
-                "status": finding.get("Status") or finding.get("status", "VULNERABLE"),
-                "codeSnippet": snippet,
-                "code_snippet": snippet,
-                "remediationHint": hint,
-                "remediation_hint": hint,
-                "evaluatedKeys": eval_keys,
-                "evaluated_keys": eval_keys,
-                "computed_score": finding.get("computed_score", 0),
-                "exposure": finding.get("exposure", "internal_only"),
-                "r_file": finding.get("r_file", 0.0)
-            })
- 
-    record_scan(
-        scan_id=scan_id,
-        target_dir=effective_dir,
-        mode="api",
-        source="api",
-        total_findings=len(flat_findings),
-        findings=flat_findings,
-        r_global=risk_data.get("R_global", 0.0),
-        files_data=risk_data.get("files", [])
-    )
- 
-    payload = {
-        "scan_id": scan_id,
-        "total_Findings": len(flat_findings),
-        "findings": flat_findings
-    }
-    
-    await event_queue.put({"event": "NEW_SCAN", "data": payload})
+    for file_entry in risk_data.get('files', []):
+        for finding in file_entry.get('findings', []):
+            f_id = finding.get('FindingId') or finding.get('finding_id')
+            f_path = sanitize_file_path(finding.get('FilePath') or finding.get('file_path') or '')
+            r_id = finding.get('RuleId') or finding.get('rule_id')
+            r_title = finding.get('RuleTitle') or finding.get('rule_title', '')
+            sev = (finding.get('Severity') or finding.get('severity') or 'MEDIUM').upper()
+            line_num = finding.get('LineNumber') or finding.get('line_number', 0)
+            snippet = finding.get('CodeSnippet') or finding.get('code_snippet', '')
+            hint = finding.get('RemediationHint') or finding.get('remediation_hint', '')
+            eval_keys = finding.get('EvaluatedKeys') or finding.get('evaluated_keys', [])
+            flat_findings.append({'findingId': f_id, 'finding_id': f_id, 'filePath': f_path, 'file_path': f_path, 'ruleId': r_id, 'rule_id': r_id, 'ruleTitle': r_title, 'rule_title': r_title, 'severity': sev, 'lineNumber': line_num, 'line_number': line_num, 'status': finding.get('Status') or finding.get('status', 'VULNERABLE'), 'codeSnippet': snippet, 'code_snippet': snippet, 'remediationHint': hint, 'remediation_hint': hint, 'evaluatedKeys': eval_keys, 'evaluated_keys': eval_keys, 'computed_score': finding.get('computed_score', 0), 'exposure': finding.get('exposure', 'internal_only'), 'r_file': finding.get('r_file', 0.0)})
+    record_scan(scan_id=scan_id, target_dir=effective_dir, mode='api', source='api', total_findings=len(flat_findings), findings=flat_findings, r_global=risk_data.get('R_global', 0.0), files_data=risk_data.get('files', []))
+    payload = {'scan_id': scan_id, 'total_Findings': len(flat_findings), 'findings': flat_findings}
+    await event_queue.put({'event': 'NEW_SCAN', 'data': payload})
     return payload
- 
- 
-@app.get("/api/history")
+
+@app.get('/api/history')
 async def get_history():
     return get_all_scans()
- 
- 
-@app.get("/api/scan/{scan_id}")
+
+@app.get('/api/scan/{scan_id}')
 async def get_scan(scan_id: str):
     scan_data = get_scan_by_id(scan_id)
     if not scan_data:
-        raise HTTPException(status_code=404, detail="Scan ID not found")
- 
-    findings = [FindingModel(**f).dict(by_alias=True) for f in scan_data.get("findings", [])]
-    return {
-        "scanId": scan_data["scan_id"],
-        "globalRisk": scan_data.get("r_global", 0.0),
-        "findings": findings
-    }
- 
- 
-@app.get("/api/replay/{scan_id}")
+        raise HTTPException(status_code=404, detail='Scan ID not found')
+    findings = [FindingModel(**f).dict(by_alias=True) for f in scan_data.get('findings', [])]
+    return {'scanId': scan_data['scan_id'], 'globalRisk': scan_data.get('r_global', 0.0), 'findings': findings}
+
+@app.get('/api/replay/{scan_id}')
 async def replay_sequence(scan_id: str):
     events = get_replay_sequence(scan_id)
-    return [
-        {
-            "eventId": e.get("event_id"),
-            "findingId": e.get("finding_id"),
-            "filePath": e.get("file_path"),
-            "timestamp": e.get("timestamp")
-        }
-        for e in events
-    ]
- 
- 
-@app.get("/api/report/{scan_id}")
+    return [{'eventId': e.get('event_id'), 'findingId': e.get('finding_id'), 'filePath': e.get('file_path'), 'timestamp': e.get('timestamp')} for e in events]
+
+@app.get('/api/report/{scan_id}')
 async def stream_report(scan_id: str):
     scan_data = get_scan_by_id(scan_id)
     if not scan_data:
-        raise HTTPException(status_code=404, detail="Scan ID not found")
- 
+        raise HTTPException(status_code=404, detail='Scan ID not found')
     pdf_bytes = generate_pdf_report(scan_data)
-    return StreamingResponse(
-        io.BytesIO(pdf_bytes),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=audit_{scan_id}.pdf"}
-    )
- 
-@app.get("/api/report/sarif/{scan_id}")
+    return StreamingResponse(io.BytesIO(pdf_bytes), media_type='application/pdf', headers={'Content-Disposition': f'attachment; filename=audit_{scan_id}.pdf'})
+
+@app.get('/api/report/sarif/{scan_id}')
 async def stream_sarif_report(scan_id: str):
     scan_data = get_scan_by_id(scan_id)
     if not scan_data:
-        raise HTTPException(status_code=404, detail="Scan ID not found")
- 
+        raise HTTPException(status_code=404, detail='Scan ID not found')
     sarif_json_str = generate_sarif_report(scan_data)
-    return StreamingResponse(
-        io.BytesIO(sarif_json_str.encode("utf-8")),
-        media_type="application/json",
-        headers={"Content-Disposition": f"attachment; filename=sarif_{scan_id}.sarif"}
-    )
- 
- 
-@app.post("/api/patch")
+    return StreamingResponse(io.BytesIO(sarif_json_str.encode('utf-8')), media_type='application/json', headers={'Content-Disposition': f'attachment; filename=sarif_{scan_id}.sarif'})
+
+@app.post('/api/patch')
 async def apply_single_patch(req: PatchRequest):
     finding = get_finding_by_id(req.findingId) if req.findingId else None
-    
-    rule_id = (finding.get("rule_id") if finding else None) or req.ruleId or ""
-    rule_title = (finding.get("rule_title") if finding else None) or req.ruleTitle or ""
-    line_num = (finding.get("line_number") if finding else None) or req.lineNumber or 0
-    raw_file_path = req.filePath or (finding.get("file_path") if finding else None)
-    file_path = sanitize_file_path(raw_file_path or "")
-    start_line = (finding.get("start_line") if finding else None) or req.startLine or 0
-    end_line = (finding.get("end_line") if finding else None) or req.endLine or 0
+    rule_id = (finding.get('rule_id') if finding else None) or req.ruleId or ''
+    rule_title = (finding.get('rule_title') if finding else None) or req.ruleTitle or ''
+    line_num = (finding.get('line_number') if finding else None) or req.lineNumber or 0
+    raw_file_path = req.filePath or (finding.get('file_path') if finding else None)
+    file_path = sanitize_file_path(raw_file_path or '')
+    start_line = (finding.get('start_line') if finding else None) or req.startLine or 0
+    end_line = (finding.get('end_line') if finding else None) or req.endLine or 0
     line_range = [start_line, end_line] if start_line and end_line else None
- 
     evaluated_keys = []
-    if finding and finding.get("evaluated_keys"):
+    if finding and finding.get('evaluated_keys'):
         try:
-            evaluated_keys = json.loads(finding["evaluated_keys"])
+            evaluated_keys = json.loads(finding['evaluated_keys'])
         except (TypeError, json.JSONDecodeError):
             evaluated_keys = []
-    code_snippet = (finding.get("code_snippet") if finding else None) or ""
-    remediation_hint = (finding.get("remediation_hint") if finding else None) or ""
- 
+    code_snippet = (finding.get('code_snippet') if finding else None) or ''
+    remediation_hint = (finding.get('remediation_hint') if finding else None) or ''
     if not file_path:
-        raise HTTPException(status_code=400, detail="Target file path could not be resolved.")
- 
-    # Resolve target directory robustly
-    target_dir = (req.targetDir or "").strip()
+        raise HTTPException(status_code=400, detail='Target file path could not be resolved.')
+    target_dir = (req.targetDir or '').strip()
     if not target_dir and finding:
-        scan_id = req.scanId or finding.get("scan_id")
+        scan_id = req.scanId or finding.get('scan_id')
         if scan_id:
             scan_data = get_scan_by_id(scan_id)
             if scan_data:
-                target_dir = scan_data.get("target_path")
- 
-    if not target_dir or target_dir == ".":
+                target_dir = scan_data.get('target_path')
+    if not target_dir or target_dir == '.':
         all_scans = get_all_scans()
         if all_scans:
-            target_dir = all_scans[0].get("target_path", ".")
+            target_dir = all_scans[0].get('target_path', '.')
         else:
-            target_dir = "."
- 
-    success, msg = apply_patch(
-        target_dir=target_dir,
-        file_path_rel=file_path,
-        rule_id=rule_id,
-        line_num=line_num,
-        line_range=line_range,
-        rule_title=rule_title,
-        evaluated_keys=evaluated_keys,
-        code_snippet=code_snippet
-    )
- 
+            target_dir = '.'
+    success, msg = apply_patch(target_dir=target_dir, file_path_rel=file_path, rule_id=rule_id, line_num=line_num, line_range=line_range, rule_title=rule_title, evaluated_keys=evaluated_keys, code_snippet=code_snippet)
     if not success:
-        #apply flag for review
-        flagged, flag_msg = annotate_for_review(
-            target_dir=target_dir,
-            file_path_rel=file_path,
-            rule_id=rule_id,
-            rule_title=rule_title,
-            remediation_hint=remediation_hint,
-            line_num=line_num,
-            code_snippet=code_snippet
-        )
+        flagged, flag_msg = annotate_for_review(target_dir=target_dir, file_path_rel=file_path, rule_id=rule_id, rule_title=rule_title, remediation_hint=remediation_hint, line_num=line_num, code_snippet=code_snippet)
         if not flagged:
             raise HTTPException(status_code=400, detail=msg)
- 
         if req.findingId:
-            record_patch_event(req.findingId, f"{file_path}.vanguard_backup", status="FLAGGED")
-        await event_queue.put({"event": "PATCH_FLAGGED", "findingId": req.findingId})
-        return {"status": "FLAGGED", "message": flag_msg}
- 
-    backup_path = f"{file_path}.vanguard_backup"
+            record_patch_event(req.findingId, f'{file_path}.vanguard_backup', status='FLAGGED')
+        await event_queue.put({'event': 'PATCH_FLAGGED', 'findingId': req.findingId})
+        return {'status': 'FLAGGED', 'message': flag_msg}
+    backup_path = f'{file_path}.vanguard_backup'
     if req.findingId:
         record_patch_event(req.findingId, backup_path)
- 
-    await event_queue.put({"event": "PATCH_APPLIED", "findingId": req.findingId})
-    return {"status": "SUCCESS", "message": msg}
- 
- 
-@app.post("/api/patch/batch")
+    await event_queue.put({'event': 'PATCH_APPLIED', 'findingId': req.findingId})
+    return {'status': 'SUCCESS', 'message': msg}
+
+@app.post('/api/patch/batch')
 async def apply_batch_patch_endpoint(req: BatchPatchRequest):
     patches_with_line_info = []
-    
     for item in req.patches:
         finding = get_finding_by_id(item.findingId) if item.findingId else None
-        line_num = (finding.get("line_number", 0) if finding else 0) or item.lineNumber or 0
-        rule_id = (finding.get("rule_id", "") if finding else "") or item.ruleId or ""
-        rule_title = (finding.get("rule_title", "") if finding else "") or item.ruleTitle or ""
-        start_line = (finding.get("start_line", 0) if finding else 0) or getattr(item, "startLine", 0)
-        end_line = (finding.get("end_line", 0) if finding else 0) or getattr(item, "endLine", 0)
+        line_num = (finding.get('line_number', 0) if finding else 0) or item.lineNumber or 0
+        rule_id = (finding.get('rule_id', '') if finding else '') or item.ruleId or ''
+        rule_title = (finding.get('rule_title', '') if finding else '') or item.ruleTitle or ''
+        start_line = (finding.get('start_line', 0) if finding else 0) or getattr(item, 'startLine', 0)
+        end_line = (finding.get('end_line', 0) if finding else 0) or getattr(item, 'endLine', 0)
         line_range = [start_line, end_line] if start_line and end_line else None
- 
         evaluated_keys = []
-        if finding and finding.get("evaluated_keys"):
+        if finding and finding.get('evaluated_keys'):
             try:
-                evaluated_keys = json.loads(finding["evaluated_keys"])
+                evaluated_keys = json.loads(finding['evaluated_keys'])
             except (TypeError, json.JSONDecodeError):
                 evaluated_keys = []
-        code_snippet = (finding.get("code_snippet") if finding else None) or ""
-        remediation_hint = (finding.get("remediation_hint") if finding else None) or ""
-        
-        raw_file_path = item.filePath or (finding.get("file_path") if finding else None)
-        file_path = sanitize_file_path(raw_file_path or "")
- 
+        code_snippet = (finding.get('code_snippet') if finding else None) or ''
+        remediation_hint = (finding.get('remediation_hint') if finding else None) or ''
+        raw_file_path = item.filePath or (finding.get('file_path') if finding else None)
+        file_path = sanitize_file_path(raw_file_path or '')
         target_dir = item.targetDir or req.targetDir
         if not target_dir and finding:
-            scan_id = item.scanId or finding.get("scan_id")
+            scan_id = item.scanId or finding.get('scan_id')
             if scan_id:
                 scan_data = get_scan_by_id(scan_id)
                 if scan_data:
-                    target_dir = scan_data.get("target_path")
-        target_dir = target_dir or "."
- 
+                    target_dir = scan_data.get('target_path')
+        target_dir = target_dir or '.'
         if file_path:
-            patches_with_line_info.append({
-                "line_num": line_num,
-                "line_range": line_range,
-                "rule_id": rule_id,
-                "rule_title": rule_title,
-                "evaluated_keys": evaluated_keys,
-                "code_snippet": code_snippet,
-                "remediation_hint": remediation_hint,
-                "file_path": file_path,
-                "target_dir": target_dir,
-                "item": item
-            })
- 
-    # Group by file_path, then sort descending by line_num per file
+            patches_with_line_info.append({'line_num': line_num, 'line_range': line_range, 'rule_id': rule_id, 'rule_title': rule_title, 'evaluated_keys': evaluated_keys, 'code_snippet': code_snippet, 'remediation_hint': remediation_hint, 'file_path': file_path, 'target_dir': target_dir, 'item': item})
     from collections import defaultdict
     file_groups = defaultdict(list)
     for p in patches_with_line_info:
-        file_groups[p["file_path"]].append(p)
- 
+        file_groups[p['file_path']].append(p)
     applied = []
     flagged = []
     for f_path, group in file_groups.items():
-        group.sort(key=lambda x: x["line_num"], reverse=True)
+        group.sort(key=lambda x: x['line_num'], reverse=True)
         for patch_info in group:
-            item = patch_info["item"]
-            t_dir = patch_info["target_dir"]
- 
-            success, _ = apply_patch(
-                target_dir=t_dir,
-                file_path_rel=f_path,
-                rule_id=patch_info["rule_id"],
-                line_num=patch_info["line_num"],
-                rule_title=patch_info["rule_title"],
-                evaluated_keys=patch_info["evaluated_keys"],
-                code_snippet=patch_info["code_snippet"]
-            )
- 
+            item = patch_info['item']
+            t_dir = patch_info['target_dir']
+            success, _ = apply_patch(target_dir=t_dir, file_path_rel=f_path, rule_id=patch_info['rule_id'], line_num=patch_info['line_num'], rule_title=patch_info['rule_title'], evaluated_keys=patch_info['evaluated_keys'], code_snippet=patch_info['code_snippet'])
             if success:
                 if item.findingId:
-                    record_patch_event(item.findingId, f"{f_path}.vanguard_backup")
+                    record_patch_event(item.findingId, f'{f_path}.vanguard_backup')
                 applied.append(item.findingId or f_path)
             else:
-                flagged_ok, _ = annotate_for_review(
-                    target_dir=t_dir,
-                    file_path_rel=f_path,
-                    rule_id=patch_info["rule_id"],
-                    rule_title=patch_info["rule_title"],
-                    remediation_hint=patch_info["remediation_hint"],
-                    line_num=patch_info["line_num"],
-                    code_snippet=patch_info["code_snippet"]
-                )
+                flagged_ok, _ = annotate_for_review(target_dir=t_dir, file_path_rel=f_path, rule_id=patch_info['rule_id'], rule_title=patch_info['rule_title'], remediation_hint=patch_info['remediation_hint'], line_num=patch_info['line_num'], code_snippet=patch_info['code_snippet'])
                 if flagged_ok:
                     if item.findingId:
-                        record_patch_event(item.findingId, f"{f_path}.vanguard_backup", status="FLAGGED")
+                        record_patch_event(item.findingId, f'{f_path}.vanguard_backup', status='FLAGGED')
                     flagged.append(item.findingId or f_path)
- 
-    await event_queue.put({"event": "BATCH_PATCH_COMPLETED", "appliedCount": len(applied), "flaggedCount": len(flagged)})
-    return {"status": "SUCCESS", "appliedFindingIds": applied, "flaggedFindingIds": flagged}
- 
- 
-@app.post("/api/rollback")
+    await event_queue.put({'event': 'BATCH_PATCH_COMPLETED', 'appliedCount': len(applied), 'flaggedCount': len(flagged)})
+    return {'status': 'SUCCESS', 'appliedFindingIds': applied, 'flaggedFindingIds': flagged}
+
+@app.post('/api/rollback')
 async def rollback_patch(req: RollbackRequest):
-    target_dir = req.targetDir or "."
-    
-    # Fallback to finding lookup if filePath is missing
+    target_dir = req.targetDir or '.'
     raw_file_path = req.filePath or req.target_file
     if not raw_file_path and req.patchId:
         finding = get_finding_by_id(req.patchId)
         if finding:
-            raw_file_path = finding.get("file_path")
-            if not req.targetDir and finding.get("scan_id"):
-                scan_data = get_scan_by_id(finding.get("scan_id"))
+            raw_file_path = finding.get('file_path')
+            if not req.targetDir and finding.get('scan_id'):
+                scan_data = get_scan_by_id(finding.get('scan_id'))
                 if scan_data:
-                    target_dir = scan_data.get("target_path", ".")
- 
-    file_path = sanitize_file_path(raw_file_path or "")
- 
+                    target_dir = scan_data.get('target_path', '.')
+    file_path = sanitize_file_path(raw_file_path or '')
     if not file_path:
-        raise HTTPException(
-            status_code=400, 
-            detail="Rollback failed: missing target file path ('filePath' or 'target_file')"
-        )
- 
+        raise HTTPException(status_code=400, detail="Rollback failed: missing target file path ('filePath' or 'target_file')")
     result = execute_rollback(target_dir, file_path)
-    if result.get("status") != "success":
-        raise HTTPException(status_code=400, detail=result.get("message", "Rollback failed"))
+    if result.get('status') != 'success':
+        raise HTTPException(status_code=400, detail=result.get('message', 'Rollback failed'))
     return result
- 
- 
-@app.post("/api/training/submit")
+
+@app.post('/api/training/submit')
 async def submit_training_score(req: TrainingScoreRequest):
     attempt_id = record_training_attempt(req.scenarioId, int(req.score), req.completionTimeSec)
-    return {"status": "SUCCESS", "attemptId": attempt_id}
- 
- 
-@app.get("/api/events/stream")
+    return {'status': 'SUCCESS', 'attemptId': attempt_id}
+
+@app.get('/api/events/stream')
 async def stream_events(request: Request):
+
     async def event_generator():
         while True:
             if await request.is_disconnected():
                 break
             try:
                 data = await asyncio.wait_for(event_queue.get(), timeout=1.0)
-                yield f"data: {json.dumps(data)}\n\n"
+                yield f'data: {json.dumps(data)}\n\n'
             except asyncio.TimeoutError:
-                yield ": keepalive\n\n"
- 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
- 
-@app.post("/api/pipeline/verify_delta")
+                yield ': keepalive\n\n'
+    return StreamingResponse(event_generator(), media_type='text/event-stream')
+
+@app.post('/api/pipeline/verify_delta')
 async def verify_delta_scan(req: PipelineRunRequest):
-    # Fetch baseline scan record to calculate dynamic deltas
     baseline_scan = get_scan_by_id(req.scan_id)
-    pre_risk = baseline_scan.get("r_global", 0.0) if baseline_scan else 0.0
-    baseline_findings = baseline_scan.get("findings", []) if baseline_scan else []
- 
-    # Run live Checkov scan with PATH and sys.executable fallback
+    pre_risk = baseline_scan.get('r_global', 0.0) if baseline_scan else 0.0
+    baseline_findings = baseline_scan.get('findings', []) if baseline_scan else []
     try:
-        checkov_bin = shutil.which("checkov")
-        cmd = [checkov_bin, "-d", req.target_dir, "-o", "json", "--quiet", "--skip-path", "vanguard_backup"] if checkov_bin else [sys.executable, "-m", "checkov.main", "-d", req.target_dir, "-o", "json", "--quiet", "--skip-path", "vanguard_backup"]
-        
+        checkov_bin = shutil.which('checkov')
+        cmd = [checkov_bin, '-d', req.target_dir, '-o', 'json', '--quiet', '--skip-path', 'vanguard_backup'] if checkov_bin else [sys.executable, '-m', 'checkov.main', '-d', req.target_dir, '-o', 'json', '--quiet', '--skip-path', 'vanguard_backup']
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        
         try:
             parsed_output = json.loads(result.stdout)
         except json.JSONDecodeError:
             parsed_output = {}
- 
-        # Handle Checkov returning a list or a dict
         findings = []
         if isinstance(parsed_output, list):
             for framework in parsed_output:
-                findings.extend(framework.get("results", {}).get("failed_checks", []))
+                findings.extend(framework.get('results', {}).get('failed_checks', []))
         else:
-            findings = parsed_output.get("results", {}).get("failed_checks", [])
- 
+            findings = parsed_output.get('results', {}).get('failed_checks', [])
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Scanner execution failed: {str(e)}")
-        
-    # Calculate live risk scores dynamically
+        raise HTTPException(status_code=500, detail=f'Scanner execution failed: {str(e)}')
     risk_data = calculate_risk(findings)
-    post_risk = risk_data.get("R_global", 0.0)
-    
+    post_risk = risk_data.get('R_global', 0.0)
     compliance_score = max(0, 100 - int(post_risk))
- 
-    current_pairs = {
-        (f.get("check_id"), sanitize_file_path(f.get("file_path", "")))
-        for f in findings if f.get("check_id")
-    }
- 
+    current_pairs = {(f.get('check_id'), sanitize_file_path(f.get('file_path', ''))) for f in findings if f.get('check_id')}
     critical_resolved = 0
     high_resolved = 0
-    
     for base_f in baseline_findings:
-        b_rule = base_f.get("rule_id")
-        b_file = sanitize_file_path(base_f.get("file_path", ""))
-        b_sev = str(base_f.get("severity", "")).upper()
-        
+        b_rule = base_f.get('rule_id')
+        b_file = sanitize_file_path(base_f.get('file_path', ''))
+        b_sev = str(base_f.get('severity', '')).upper()
         if b_rule and (b_rule, b_file) not in current_pairs:
-            if b_sev == "CRITICAL":
+            if b_sev == 'CRITICAL':
                 critical_resolved += 1
-            elif b_sev == "HIGH":
+            elif b_sev == 'HIGH':
                 high_resolved += 1
- 
-    # Format findings array safely to prevent KeyErrors
-    triage_logs = [{
-        "FindingId": f.get("check_id", "UNKNOWN_RULE"),
-        "Severity": infer_severity(
-            f.get("check_id", ""),
-            str(f.get("check_name", "")),
-            str(f.get("guideline", "")),
-        ),
-        "FilePath": sanitize_file_path(f.get("file_path", ""))
-    } for f in findings]
-    
+    triage_logs = [{'FindingId': f.get('check_id', 'UNKNOWN_RULE'), 'Severity': infer_severity(f.get('check_id', ''), str(f.get('check_name', '')), str(f.get('guideline', ''))), 'FilePath': sanitize_file_path(f.get('file_path', ''))} for f in findings]
     event_store.log_post_scan(req.scan_id, pre_risk, post_risk, triage_logs)
-    
-    return {
-        "status": "SUCCESS",
-        "PrePatchRiskScore": pre_risk,
-        "PostPatchRiskScore": post_risk,
-        "CriticalResolved": critical_resolved,
-        "HighResolved": high_resolved,
-        "ComplianceScore": compliance_score,
-        "TriageLogs": triage_logs
-    }
- 
-@app.post("/api/purge_backups")
-@app.post("/api/pipeline/purge_backups")
-async def purge_backups_endpoint(req: Optional[PurgeRequest] = None, target_dir: Optional[str] = None):
-    effective_dir = (target_dir or (req.resolved_target_dir() if req else ".")).strip()
-    
+    return {'status': 'SUCCESS', 'PrePatchRiskScore': pre_risk, 'PostPatchRiskScore': post_risk, 'CriticalResolved': critical_resolved, 'HighResolved': high_resolved, 'ComplianceScore': compliance_score, 'TriageLogs': triage_logs}
+
+@app.post('/api/purge_backups')
+@app.post('/api/pipeline/purge_backups')
+async def purge_backups_endpoint(req: Optional[PurgeRequest]=None, target_dir: Optional[str]=None):
+    effective_dir = (target_dir or (req.resolved_target_dir() if req else '.')).strip()
     success, purged_count, message = purge_backup_files(effective_dir)
     if not success:
         raise HTTPException(status_code=400, detail=message)
-        
-    return {
-        "status": "SUCCESS", 
-        "files_purged": purged_count, 
-        "message": message
-    }
- 
-@app.post("/api/pipeline/git/create_pr")
-@app.post("/api/git/pr")
+    return {'status': 'SUCCESS', 'files_purged': purged_count, 'message': message}
+
+@app.post('/api/pipeline/git/create_pr')
+@app.post('/api/git/pr')
 async def trigger_pr(req: GitPRRequest):
     target_dir = req.resolved_target_dir()
     baseline_scan = get_scan_by_id(req.scanId) if req.scanId else None
-    
     if baseline_scan:
-        current_risk = baseline_scan.get("r_global", 0.0)
+        current_risk = baseline_scan.get('r_global', 0.0)
         compliance_score = max(0, 100 - int(current_risk))
     else:
         compliance_score = 100
- 
     result = git_manager.create_remediation_pr(target_dir, req.scanId, compliance_score)
-    
-    if result.get("status") != "SUCCESS":
-        raise HTTPException(status_code=400, detail=result.get("error", "Git PR creation failed"))
-        
+    if result.get('status') != 'SUCCESS':
+        raise HTTPException(status_code=400, detail=result.get('error', 'Git PR creation failed'))
     return result
